@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Req, Delete, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Req, Delete, Param, UseGuards, Query } from '@nestjs/common';
 import { AppService } from './app.service';
 import {CreateUserDto, LoginDto} from "./dto/user.dto";
 import { AuthGuard } from './guards/auth.guard';
@@ -11,8 +11,10 @@ export class AppController {
 
   @Get()
   @UseGuards(AuthGuard)
-  getAll(){
-    return this.UserServive.getUser();
+  getAll(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 5){
+    return this.UserServive.getUser(page, limit);
   }
   
   @Post()

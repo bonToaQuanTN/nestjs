@@ -45,7 +45,7 @@ export class AppService {
     });
   }
   
-  async getUser(page: number = 1, limit: number = 10){
+  async getUser(page: number = 1, limit: number = 5){
     const offset = (page - 1) * limit;
 
   const { count, rows } = await this.userModel.findAndCountAll({

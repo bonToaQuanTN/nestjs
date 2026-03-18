@@ -1,29 +1,48 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
+import { AppController } from './controller/app.controller';
+import { RoleController }from './controller/app.controllerRole';
 import { AppService } from './app.service';
 import { SequelizeModule } from "@nestjs/sequelize";
-import { Users } from './app.model';
+import { Users } from './model/app.model';
+import { Role } from './model/app.modelRoles';
+// import {Permission} from './model/app.permissions'
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { StringValue } from 'ms';
 
 @Module({
   imports: [
-    SequelizeModule.forRoot({
-      dialect: 'postgres',
-      host: 'localhost',
-      port: 6969,
-      username: 'postgres',
-      password: 'MinWan',
-      database: 'crud_db',
-      autoLoadModels: true,
-      synchronize: true,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: ['.env']
     }),
-    SequelizeModule.forFeature([Users]),
-    JwtModule.register({
-      secret: 'YOUR_SECRET_KEY',
-      signOptions: { expiresIn: '1h' },
+    SequelizeModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        dialect: 'postgres',
+        host: configService.get('DB_HOST'),
+        port: configService.get<number>('DB_PORT'),
+        username: configService.get('DB_USERNAME'),
+        password: configService.get('DB_PASSWORD'),
+        database: configService.get('DB_NAME'),
+        autoLoadModels: true,
+        synchronize: true,
+      }),
     }),
+    SequelizeModule.forFeature([Role, Users]),
+    JwtModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.getOrThrow<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: configService.getOrThrow<string>('JWT_EXPIRES')as StringValue,
+        },
+      }),
+    })
   ],
-  controllers: [AppController],
+  controllers: [AppController,RoleController],
   providers: [AppService]
 })
 export class AppModule {}

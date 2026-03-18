@@ -5,12 +5,15 @@ import {
   UnauthorizedException
  } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import * as jwt from 'jsonwebtoken';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthGuard implements CanActivate {
 
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private reflector: Reflector,
+    private jwtService: JwtService
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
 
@@ -34,7 +37,7 @@ export class AuthGuard implements CanActivate {
     const token = authHeader.split(' ')[1];
 
     try {
-      const decoded = jwt.verify(token, 'YOUR_SECRET_KEY');
+      const decoded = this.jwtService.verify(token);
       request.user = decoded;
       return true;
     } catch (err) {

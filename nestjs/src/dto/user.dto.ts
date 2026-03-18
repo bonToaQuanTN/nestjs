@@ -1,25 +1,42 @@
 import { IsEmail, IsString } from "class-validator";
 import { Transform } from "class-transformer";
+import { ApiProperty } from '@nestjs/swagger';
+
 export class CreateUserDto{
-    name!: string;
-    @IsEmail({}, { message: 'Email must be valid' })
-    @Transform(({ value }) => value.toLowerCase().trim())
-    email!: string;
-    password!: string;
-    designation!: string;
-    role?: string;
+
+  @ApiProperty({ example: 'test' })
+  name!: string;
+
+  @IsEmail({}, { message: 'Email must be valid' })
+  @Transform(({ value }) => value.toLowerCase().trim())
+  @ApiProperty({ example: 'test@gmail.com' })
+  email!: string;
+
+  @ApiProperty({ example: 'string' })
+  password!: string;
+
+  @ApiProperty({ example: 'test' })
+  designation!: string;
+
+  @ApiProperty({ example: '1' })
+  roleId?: string;
 }
 
 export class LoginDto {
 
   @IsEmail()
+  @ApiProperty({ example: 'test@gmail.com' })
   email!: string;
-  @IsString()
-  password!: string;
 
+  @IsString()
+  @ApiProperty({ example: 'string' })
+  password!: string;
 }
 
-export enum UserRole {
-  ADMIN = 'admin',
-  USER = 'user'
+export class createRoleDto{
+  @ApiProperty({example:'user'})
+  name!: string;
+
+  @ApiProperty({example:'1'})
+  RoleId!: string;
 }

@@ -1,10 +1,11 @@
 import { Injectable, ConflictException, NotFoundException, ForbiddenException , UnauthorizedException, BadRequestException  } from '@nestjs/common';
 import {Users} from "./model/app.model";
 import {Role} from "./model/app.modelRoles";
-import {createRoleDto, CreateUserDto, LoginDto} from "./dto/user.dto";
+import {createRoleDto, CreateUserDto, LoginDto,PermissionDto} from "./dto/user.dto";
 import { InjectModel} from "@nestjs/sequelize";
 import * as bcrypt from "bcrypt";
 import { JwtService } from '@nestjs/jwt';
+import {Permission} from './model/app.permissions'
 
 @Injectable()
 export class AppService {
@@ -12,6 +13,8 @@ export class AppService {
     @InjectModel(Users) private userModel: typeof Users,
 
     @InjectModel(Role) private roleModel: typeof Role,
+
+    @InjectModel(Permission) private permissionModel: typeof Permission,
 
     private readonly jwtService: JwtService
   ) {}
@@ -143,24 +146,29 @@ export class AppService {
   }
 
   async login(loginDto: LoginDto) {
-    const { email, password } = loginDto;
-    
-    const user = await this.userModel.findOne({where: { email }});
-    console.log(user)
-    if (!user) {
-      throw new NotFoundException('Not found');
-    }
-  const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      throw new UnauthorizedException('Wrong password');
-    }
+  const { email, password } = loginDto;
 
-  const token = { id: user.id, email: user.email, roleID: user.roleId };
-    return {
-      message: 'Login success',
-      token: this.jwtService.sign(token),
-    }
+  const user = await this.userModel.findOne({where: { email },include: [{model: Role,include: [Permission]}]});
+
+  if (!user) {
+    throw new NotFoundException('Not found');
   }
+
+  const match = await bcrypt.compare(password, user.password);
+  if (!match) {
+    throw new UnauthorizedException('Wrong password');
+  }
+
+  const role = user.role;
+  const permissions = role?.permissions?.map(p => p.name) || [];
+
+  const payload = {id: user.id,email: user.email,role: role?.name,permissions: permissions};
+
+  return {
+    message: 'Login success',
+    access_token: this.jwtService.sign(payload),
+  };
+}
 
   async getRoles() {
     const roles = await this.roleModel.findAll({
@@ -213,6 +221,60 @@ export class AppService {
     return {
       message: 'Update role success',
       data: role,
+    };
+  }
+
+  async getAllPermissions() {
+    return this.permissionModel.findAll({include: [Role]});
+  }
+
+  async getPermissionById(id: number) {
+    const permission = await this.permissionModel.findByPk(id, {
+      include: [Role],
+    });
+
+    if (!permission) {
+      throw new NotFoundException('Permission not found');
+    }
+
+    return permission;
+  }
+
+  async createPermission(name: string, roleId: string) {
+    const role = await this.roleModel.findByPk(roleId);
+    if (!role) {
+      throw new NotFoundException('Role not found');
+    }
+
+    return this.permissionModel.create({name, roleId});
+  }
+
+  async updatePermission(id: number, dto: PermissionDto) {
+    const permission = await this.permissionModel.findByPk(id);
+
+    if (!permission) {
+      throw new NotFoundException('Permission not found');
+    }
+
+    await permission.update(dto);
+
+    return {
+      message: 'Update permission success',
+      data: permission,
+    };
+  }
+
+  async deletePermission(id: number) {
+    const permission = await this.permissionModel.findByPk(id);
+
+    if (!permission) {
+      throw new NotFoundException('Permission not found');
+    }
+
+    await permission.destroy();
+
+    return {
+      message: 'Delete permission success',
     };
   }
 }

@@ -1,7 +1,8 @@
-import {Table, Column, Model, DataType, AllowNull, PrimaryKey} from "sequelize-typescript";
+import {Table, Column, Model, DataType, AllowNull, PrimaryKey, HasMany} from "sequelize-typescript";
+import {Permission} from "./app.permissions"
+
 @Table({
-    tableName: 'Roles',
-    timestamps: true
+    tableName: 'Roles'
 })
 export class Role extends Model {
     @PrimaryKey
@@ -12,6 +13,6 @@ export class Role extends Model {
     declare name: string;
 
     @Column({ type: DataType.STRING })
-    declare description: string;
-    
+    declare RoleId: string;
+    @HasMany(() => Permission) declare permissions: Permission[];
 }

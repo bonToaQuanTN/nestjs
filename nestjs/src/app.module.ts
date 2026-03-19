@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './controller/app.controller';
 import { RoleController }from './controller/app.controllerRole';
+import { permissionController } from './controller/app.controllerPermission'
 import { AppService } from './app.service';
 import { SequelizeModule } from "@nestjs/sequelize";
 import { Users } from './model/app.model';
 import { Role } from './model/app.modelRoles';
-// import {Permission} from './model/app.permissions'
+import {Permission} from './model/app.permissions'
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
@@ -30,7 +31,7 @@ import { StringValue } from 'ms';
         synchronize: true,
       }),
     }),
-    SequelizeModule.forFeature([Role, Users]),
+    SequelizeModule.forFeature([Role, Users,Permission]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -42,7 +43,7 @@ import { StringValue } from 'ms';
       }),
     })
   ],
-  controllers: [AppController,RoleController],
+  controllers: [AppController,RoleController,permissionController],
   providers: [AppService]
 })
 export class AppModule {}

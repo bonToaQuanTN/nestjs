@@ -1,4 +1,4 @@
-import { IsEmail, IsString } from "class-validator";
+import { IsEmail, IsString, IsNotEmpty, IsNumber } from "class-validator";
 import { Transform } from "class-transformer";
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -19,7 +19,7 @@ export class CreateUserDto{
   designation!: string;
 
   @ApiProperty({ example: '1' })
-  roleId?: string;
+  roleId?: number;
 }
 
 export class LoginDto {
@@ -35,8 +35,22 @@ export class LoginDto {
 
 export class createRoleDto{
   @ApiProperty({example:'user'})
+  @IsNotEmpty()
   name!: string;
 
   @ApiProperty({example:'1'})
+  @IsNotEmpty()
   RoleId!: string;
+}
+
+export class PermissionDto {
+
+  @IsString()
+  @ApiProperty({example:'GET'})
+  @IsNotEmpty()
+  name!: string;
+
+  @ApiProperty({example:'1'})
+  @IsNotEmpty()
+  roleId!: string;
 }

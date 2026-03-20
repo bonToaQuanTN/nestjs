@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './controller/app.controller';
 import { RoleController }from './controller/app.controllerRole';
-import { permissionController } from './controller/app.controllerPermission'
-import { AppService } from './app.service';
+import { permissionController } from './controller/app.controllerPermission';
+import { UploadController }from './controller/app.controllerUpload';
+import { UploadService } from './service/upload.service';
+import { AppService } from './service/app.service';
 import { SequelizeModule } from "@nestjs/sequelize";
 import { Users } from './model/app.model';
 import { Role } from './model/app.modelRoles';
@@ -28,8 +30,8 @@ import { StringValue } from 'ms';
         password: configService.get('DB_PASSWORD'),
         database: configService.get('DB_NAME'),
         autoLoadModels: true,
-        synchronize: true,
-      }),
+        synchronize: true
+      })
     }),
     SequelizeModule.forFeature([Role, Users,Permission]),
     JwtModule.registerAsync({
@@ -38,12 +40,12 @@ import { StringValue } from 'ms';
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.getOrThrow<string>('JWT_EXPIRES')as StringValue,
-        },
-      }),
+          expiresIn: configService.getOrThrow<string>('JWT_EXPIRES')as StringValue
+        }
+      })
     })
   ],
-  controllers: [AppController,RoleController,permissionController],
-  providers: [AppService]
+  controllers: [AppController,RoleController,permissionController,UploadController],
+  providers: [AppService,UploadService]
 })
 export class AppModule {}

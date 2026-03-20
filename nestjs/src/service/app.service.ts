@@ -1,11 +1,11 @@
 import { Injectable, ConflictException, NotFoundException, ForbiddenException , UnauthorizedException, BadRequestException  } from '@nestjs/common';
-import {Users} from "./model/app.model";
-import {Role} from "./model/app.modelRoles";
-import {createRoleDto, CreateUserDto, LoginDto,PermissionDto} from "./dto/user.dto";
+import {Users} from "../model/app.model";
+import {Role} from "../model/app.modelRoles";
+import {createRoleDto, CreateUserDto, LoginDto,PermissionDto} from "../dto/user.dto";
 import { InjectModel} from "@nestjs/sequelize";
 import * as bcrypt from "bcrypt";
 import { JwtService } from '@nestjs/jwt';
-import {Permission} from './model/app.permissions'
+import {Permission} from '../model/app.permissions'
 
 @Injectable()
 export class AppService {
@@ -19,6 +19,7 @@ export class AppService {
     private readonly jwtService: JwtService
   ) {}
 
+  //tu dong tao ma id theo mau
   async generateUserId(){
     const lastUser = await this.userModel.findOne({
     order: [['id', 'DESC']]
@@ -29,7 +30,7 @@ export class AppService {
     return `221CTT${String(newNumber).padStart(3, '0')}`;
   }
   
-  //Register 
+ //dang ky user
   async createUser(data: CreateUserDto){
 
     const hashedPassword = await bcrypt.hash(data.password, 10);
@@ -49,6 +50,7 @@ export class AppService {
     });
   }
   
+  //lay toan bo thong tin user
   async getUser(page: number = 1, limit: number = 5){
 
     const offset = (page - 1) * limit;
@@ -72,6 +74,7 @@ export class AppService {
     };
   }
   
+  //lay thong tin theo id user
   async getByUserId(id: string) {
 
     const user = await this.userModel.findOne({
@@ -86,6 +89,7 @@ export class AppService {
   return user;
   }
 
+  // sua thong tin user
   async updateUser(id: string, data: CreateUserDto, currentUser: any) {
 
     const user = await this.userModel.findOne({
@@ -128,6 +132,7 @@ export class AppService {
     return { message: 'User updated successfully' };
   }
 
+//xoa user
   async deleteUser(id: string) {
 
     const user = await this.userModel.findOne({
@@ -260,21 +265,21 @@ export class AppService {
 
     return {
       message: 'Update permission success',
-      data: permission,
+      data: permission
     };
   }
 
   async deletePermission(id: number) {
-    const permission = await this.permissionModel.findByPk(id);
+  const permission = await this.permissionModel.findByPk(id);
 
-    if (!permission) {
-      throw new NotFoundException('Permission not found');
-    }
-
-    await permission.destroy();
-
-    return {
-      message: 'Delete permission success',
-    };
+  if (!permission) {
+    throw new NotFoundException('Permission not found');
   }
+
+  await permission.destroy();
+
+  return {
+    message: 'Delete permission success'
+  };
+}
 }

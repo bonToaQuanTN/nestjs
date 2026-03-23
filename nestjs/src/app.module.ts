@@ -12,6 +12,10 @@ import {Permission} from './model/app.permissions'
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
+import { CacheModule } from '@nestjs/cache-manager';
+import { redisStore } from 'cache-manager-redis-store';
+import { WinstonModule } from 'nest-winston';
+import * as winston from 'winston';
 
 @Module({
   imports: [
@@ -19,6 +23,7 @@ import { StringValue } from 'ms';
       isGlobal: true,
       envFilePath: ['.env']
     }),
+
     SequelizeModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -33,6 +38,7 @@ import { StringValue } from 'ms';
         synchronize: true
       })
     }),
+
     SequelizeModule.forFeature([Role, Users,Permission]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -43,6 +49,35 @@ import { StringValue } from 'ms';
           expiresIn: configService.getOrThrow<string>('JWT_EXPIRES')as StringValue
         }
       })
+    }),
+
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => ({
+        store: await redisStore({
+          socket: {host: '127.0.0.1', port: 6379}
+        }),
+        ttl: 60000
+      })
+    }),
+
+    WinstonModule.forRoot({
+      transports: [
+        new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.colorize(),
+            winston.format.printf(({ level, message, timestamp }) => {
+              return `${timestamp} [${level}] ${message}`;
+            })
+           )
+        }),
+
+        new winston.transports.File({
+          filename: 'logs/error.log', level: 'error',
+        }),
+        new winston.transports.File({filename: 'logs/combined.log'})
+      ]
     })
   ],
   controllers: [AppController,RoleController,permissionController,UploadController],

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Req, Delete, Patch, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Req, Delete, Patch, Param, UseGuards, Query,UseInterceptors  } from '@nestjs/common';
 import { AppService } from '../service/app.service';
 import { CreateUserDto, LoginDto} from "../dto/user.dto";
 import { AuthGuard } from '../guards/auth.guard';
@@ -6,6 +6,8 @@ import {PermissionGuard} from '../guards/PermissionGuard'
 import { Roles,Permissions } from '../guards/roles.decorator';
 import { Public } from '../guards/public.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody,ApiBearerAuth  } from '@nestjs/swagger';
+import { CacheInterceptor } from '@nestjs/cache-manager';
+
 
 @ApiTags('User')
 @UseGuards(AuthGuard,PermissionGuard)
@@ -15,11 +17,14 @@ export class AppController {
   constructor( private readonly userService: AppService ){}
 
   @Get()
+  @UseInterceptors(CacheInterceptor)
   @ApiOperation({summary:'Get all users'})
   @ApiResponse({status:200, description:'Success'})
   @Permissions('GET.USER')
-  getAll(@Query('page') page: number = 1,
-  @Query('limit') limit: number = 5){return this.userService.getUser(page, limit);
+  getAll(
+    @Query('page') page: number,
+    @Query('limit') limit: number,){
+    return this.userService.getUser(page, limit);
   }
 
   @Post()

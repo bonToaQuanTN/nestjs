@@ -59,25 +59,6 @@ import * as winston from 'winston';
         }),
         ttl: 60000
       })
-    }),
-
-    WinstonModule.forRoot({
-      transports: [
-        new winston.transports.Console({
-          format: winston.format.combine(
-            winston.format.timestamp(),
-            winston.format.colorize(),
-            winston.format.printf(({ level, message, timestamp }) => {
-              return `${timestamp} [${level}] ${message}`;
-            })
-           )
-        }),
-
-        new winston.transports.File({
-          filename: 'logs/error.log', level: 'error',
-        }),
-        new winston.transports.File({filename: 'logs/combined.log'})
-      ]
     })
   ],
   controllers: [AppController,RoleController,permissionController,UploadController],

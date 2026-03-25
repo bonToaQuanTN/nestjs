@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import {Permission} from '../model/app.permissions';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
+import { Op } from 'sequelize';
 
 @Injectable()
 export class AppService {
@@ -197,6 +198,22 @@ export class AppService {
     }
     
   }
+
+  async searchUserByName(name: string) {
+    this.logger.log(`Search user by name: ${name}`);
+
+    try {
+      const users = await this.userModel.findAll({
+        where: {name: {[Op.like]: `%${name}%`}},
+        attributes: ['id', 'name', 'email', 'designation']
+      });
+      return users;
+
+    } catch (error) {
+      this.handleError(error, 'Search user error');
+      throw error;
+    }
+}
 
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;

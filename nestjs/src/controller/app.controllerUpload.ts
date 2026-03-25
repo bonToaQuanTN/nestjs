@@ -2,9 +2,9 @@ import {Controller, Post, UseInterceptors, UploadedFile,UseGuards   }from '@nest
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from '../service/upload.service';
 import { ApiConsumes, ApiBody, ApiTags, ApiOperation, ApiResponse, ApiBearerAuth  } from '@nestjs/swagger';
-import { AuthGuard } from '../guards/auth.guard';
-import {PermissionGuard,} from '../guards/PermissionGuard'
-import { Roles,Permissions, } from '../guards/roles.decorator';
+import { AuthGuard } from '../common/guards/auth.guard';
+import {PermissionGuard,} from '../common/guards/PermissionGuard'
+import { Roles,Permissions, } from '../common/guards/roles.decorator';
 
 @UseGuards(AuthGuard,PermissionGuard)
 @ApiBearerAuth()

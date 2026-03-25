@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Put, Body, Req, Delete, Patch, Param, UseGuards, Query,UseInterceptors  } from '@nestjs/common';
 import { AppService } from '../service/app.service';
 import { CreateUserDto, LoginDto} from "../dto/user.dto";
-import { AuthGuard } from '../guards/auth.guard';
-import {PermissionGuard} from '../guards/PermissionGuard'
-import { Roles,Permissions } from '../guards/roles.decorator';
-import { Public } from '../guards/public.decorator';
+import { AuthGuard } from '../common/guards/auth.guard';
+import {PermissionGuard} from '../common/guards/PermissionGuard'
+import { Roles,Permissions } from '../common/guards/roles.decorator';
+import { Public } from '../common/guards/public.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody,ApiBearerAuth  } from '@nestjs/swagger';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 
@@ -33,6 +33,13 @@ export class AppController {
     return this.userService.createUser(data);
   }
   
+  @Get('search')
+  @Permissions('SRC.USER')
+  @ApiOperation({ summary: 'Search user by name' })
+  searchUser(@Query('name') name: string) {
+    return this.userService.searchUserByName(name);
+  }
+
   @Get(":id")
   @Permissions('GETID.USER')
   getOne(@Param("id") id: string) {

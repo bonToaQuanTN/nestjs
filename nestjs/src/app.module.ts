@@ -14,8 +14,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
-import { WinstonModule } from 'nest-winston';
-import * as winston from 'winston';
 
 @Module({
   imports: [
@@ -40,6 +38,7 @@ import * as winston from 'winston';
     }),
 
     SequelizeModule.forFeature([Role, Users,Permission]),
+    
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

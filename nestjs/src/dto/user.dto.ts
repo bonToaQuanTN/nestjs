@@ -1,6 +1,7 @@
 import { IsEmail, IsString, IsNotEmpty, IsNumber } from "class-validator";
 import { Transform } from "class-transformer";
 import { ApiProperty } from '@nestjs/swagger';
+import { diskStorage } from 'multer';
 
 export class CreateUserDto{
 
@@ -54,3 +55,12 @@ export class PermissionDto {
   @IsNotEmpty()
   roleId!: string;
 }
+
+export const multerConfig = {
+    storage: diskStorage({
+      destination: './uploads',
+      filename: (req, file, cb) => {
+        cb(null, Date.now() + '-' + file.originalname);
+      }
+    })  
+  };

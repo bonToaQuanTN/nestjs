@@ -1,9 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException,Logger } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
 import type { Express } from 'express';
+import * as fs from 'fs';
 
 @Injectable()
 export class UploadService {
+
+  private readonly logger = new Logger(UploadService.name);
   constructor() {
     cloudinary.config({
       cloud_name: process.env.CLOUDINARY_NAME,
@@ -17,16 +20,35 @@ export class UploadService {
       throw new BadRequestException('File is required');
     }
 
+    const sizeGB = file.size / (1024 * 1024 * 1024);
+
+    if (sizeGB > 1) {
+      this.logger.warn(`Large file detected: ${sizeGB.toFixed(2)} GB`);
+    }
+
+    this.logger.log(`Uploading file: ${file.originalname}`);
+    this.logger.log(`File path: ${file.path}`);
     return new Promise((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream({ folder: 'nestjs_upload' }, (error, result) => {
+      cloudinary.uploader.upload_large(
+        file.path,
+        {
+          resource_type: 'auto',
+          folder: 'nestjs_upload',
+          chunk_size: 50000000
+        },
+        (error, result) => {
+
           if (error || !result) {
-            return reject(error || new Error('Upload failed'));
+            this.logger.error('Upload failed', error);
+            return reject(error);
           }
 
+          this.logger.log(`Upload success: ${result.secure_url}`);
+
           resolve(result.secure_url);
-        })
-        .end(file.buffer);
+        }
+      )
     });
   }
+   
 }

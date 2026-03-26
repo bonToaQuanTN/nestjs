@@ -5,6 +5,8 @@ import { ApiConsumes, ApiBody, ApiTags, ApiOperation, ApiResponse, ApiBearerAuth
 import { AuthGuard } from '../common/guards/auth.guard';
 import {PermissionGuard,} from '../common/guards/PermissionGuard'
 import { Roles,Permissions, } from '../common/guards/roles.decorator';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @UseGuards(AuthGuard,PermissionGuard)
 @ApiBearerAuth()
@@ -12,25 +14,34 @@ import { Roles,Permissions, } from '../common/guards/roles.decorator';
 export class UploadController {
 
     constructor(private readonly uploadService: UploadService) {}
-    
-    @UseInterceptors(FileInterceptor('file'))
+    @Post()
+    @ApiOperation({ summary: 'UploadFile' })
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         schema: {
-            type: 'object',properties: {
+            type: 'object',properties:{
                 file: {type: 'string',format: 'binary'}
             }
         }
     })
-    @ApiOperation({ summary: 'UploadFile' })
-    @Post()
-    async upload(@UploadedFile() file: Express.Multer.File) {
-        
-        const url = await this.uploadService.uploadFile(file);
-        console.log(file);
-        return {
-            message: 'Upload success',
-            url
-        };
-    }
+    @UseInterceptors(FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads',filename: (req, file, cb) => {
+          const uniqueName =Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, uniqueName + extname(file.originalname));
+        }
+      }),
+      limits: {
+        fileSize: 1024 * 1024 * 1024 * 20 // 20GB
+      }
+    })
+  )
+  
+  async upload(@UploadedFile() file: Express.Multer.File) {
+    const url = await this.uploadService.uploadFile(file);
+    return {
+      message: 'Upload success',
+      url
+    };
+  }
 }

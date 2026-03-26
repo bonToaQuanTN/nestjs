@@ -1,6 +1,7 @@
 import { IsEmail, IsString, IsNotEmpty, IsNumber } from "class-validator";
 import { Transform } from "class-transformer";
 import { ApiProperty } from '@nestjs/swagger';
+import { diskStorage } from 'multer';
 
 export class CreateUserDto{
 
@@ -53,4 +54,22 @@ export class PermissionDto {
   @ApiProperty({example:'1'})
   @IsNotEmpty()
   roleId!: string;
+}
+
+
+export class CreateProductDto {
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty({ example: "cái" })
+  unit!: string;
+
+  @ApiProperty({ example: 100000 })
+  price!: number;
+
+  @ApiProperty({ example: "Việt Nam" })
+  origin!: string;
+
+  @ApiProperty({ required: false })
+  note!: string;
 }

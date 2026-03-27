@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Controller, Module } from '@nestjs/common';
 import { AppController } from './controller/app.controller';
 import { RoleController }from './controller/app.controllerRole';
 import { permissionController } from './controller/app.controllerPermission';
@@ -14,7 +14,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
-import {Product} from './model/app.modelproduct';
+import {Product} from './model/app.modelProduct';
+import {ProductController} from './controller/app.controllerProduct'
 
 @Module({
   imports: [
@@ -61,7 +62,7 @@ import {Product} from './model/app.modelproduct';
       })
     })
   ],
-  controllers: [AppController,RoleController,permissionController,UploadController],
+  controllers: [AppController,RoleController,permissionController,UploadController,ProductController],
   providers: [AppService,UploadService]
 })
 export class AppModule {}

@@ -56,11 +56,20 @@ export class PermissionDto {
   roleId!: string;
 }
 
-export const multerConfig = {
-    storage: diskStorage({
-      destination: './uploads',
-      filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
-      }
-    })  
-  };  
+export class CreateProductDto {
+
+  @ApiProperty()
+  name!: string;
+
+  @ApiProperty({ example: "cái" })
+  unit!: string;
+
+  @ApiProperty({ example: 100000 })
+  price!: number;
+
+  @ApiProperty({ example: "Việt Nam" })
+  origin!: string;
+
+  @ApiProperty({ required: false })
+  note!: string;
+}

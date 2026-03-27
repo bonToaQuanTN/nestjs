@@ -1,7 +1,10 @@
 import {Table,Column,Model,DataType,PrimaryKey,Default} from 'sequelize-typescript';
 import { v4 as uuidv4 } from 'uuid';
 
-@Table
+@Table({
+    tableName: 'Products',
+    paranoid: true
+})
 export class Product extends Model<Product> {
     
     @PrimaryKey

@@ -2,7 +2,8 @@ import {Table, Column, Model, DataType, AllowNull, PrimaryKey, HasMany} from "se
 import {Permission} from "./app.permissions"
 
 @Table({
-    tableName: 'Roles'
+    tableName: 'Roles',
+    paranoid: true
 })
 export class Role extends Model {
     @PrimaryKey
@@ -12,7 +13,5 @@ export class Role extends Model {
     @Column({ type: DataType.STRING, allowNull: false, unique: true })
     declare name: string;
 
-    @Column({ type: DataType.STRING })
-    declare RoleId: string;
     @HasMany(() => Permission) declare permissions: Permission[];
 }

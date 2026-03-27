@@ -3,7 +3,8 @@ import { Role } from './app.modelRoles';
 
 @Table({
   tableName:'Permission',
-  version:'true'
+  version:'true',
+  paranoid: true
 })
 
 export class Permission extends Model {

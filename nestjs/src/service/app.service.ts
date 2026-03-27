@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, NotFoundException, ForbiddenException , UnauthorizedException, BadRequestException, Inject, Logger } from '@nestjs/common';
 import {Users} from "../model/app.model";
 import {Role} from "../model/app.modelRoles";
-import {createRoleDto, CreateUserDto, LoginDto,PermissionDto} from "../dto/user.dto";
+import {createRoleDto, CreateUserDto, LoginDto,PermissionDto, CreateProductDto} from "../dto/user.dto";
 import { InjectModel} from "@nestjs/sequelize";
 import * as bcrypt from "bcrypt";
 import { JwtService } from '@nestjs/jwt';
@@ -9,6 +9,7 @@ import {Permission} from '../model/app.permissions';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { Op } from 'sequelize';
+import {Product} from '../model/app.modelProduct';
 
 @Injectable()
 export class AppService {
@@ -22,6 +23,8 @@ export class AppService {
     @InjectModel(Permission) private permissionModel: typeof Permission,
 
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+
+    @InjectModel(Product) private productModel: typeof Product,
 
     private readonly jwtService: JwtService
   ) {}
@@ -281,7 +284,7 @@ export class AppService {
     }
   }
 
-  async createRole(name: string, RoleId?: string) {
+  async createRole(name: string) {
     this.logger.log(`Create role attempt: ${name}`);
     
     try {
@@ -295,7 +298,7 @@ export class AppService {
 
       this.logger.log(`Role created successfully: ${name}`);
 
-      return this.roleModel.create({ name, RoleId });
+      return this.roleModel.create({ name });
 
     } catch (error) {
       
@@ -515,4 +518,175 @@ export class AppService {
     }
   }
 
+  async createProduct(data: CreateProductDto) {
+    const { name, unit, price, origin, note } = data;
+    this.logger.log(`Create product attempt: ${name}`);
+    try {
+      const existProduct = await this.productModel.findOne({
+        where: { name }
+      });
+      if (existProduct) {
+        this.logger.warn(`Create product failed - product exists: ${name}`);
+        throw new ConflictException('Product already exists');
+      }
+      const product = await this.productModel.create({name,unit,price,origin,note}as any);
+
+      await this.cacheManager.del(`product_${product.id}`);
+      await this.cacheManager.del('products_all');
+
+      this.logger.log('CACHE INVALIDATED: product cache');
+      this.logger.log(`Product created successfully: ${data.name}`);
+
+      return product;
+    }catch(error) {
+      this.handleError(error, 'Create product error');
+      throw error;
+    }
+
+    return await this.productModel.create();
+  }
+
+  async getProducts(page: number = 1) {
+    this.logger.log(`Get products page ${page}`);
+
+    try {
+      const limit = 10;
+      const offset = (page - 1) * limit;
+
+      const cacheKey = `products_page_${page}`;
+      const cached = await this.cacheManager.get(cacheKey);
+
+      if (cached) {
+        this.logger.log(`CACHE HIT: ${cacheKey}`);
+        return cached;
+      }
+      this.logger.warn(`CACHE MISS: ${cacheKey}`);
+
+      const { rows, count } = await this.productModel.findAndCountAll({
+        attributes: ['code', 'name', 'unit', 'price', 'origin', 'note'],
+        limit,
+        offset,
+        order: [['createdAt', 'DESC']]
+      });
+
+      const result = {
+        total: count,
+        page,
+        totalPages: Math.ceil(count / limit),
+        data: rows
+      };
+
+      await this.cacheManager.set(cacheKey, result, 60);
+      this.logger.log('Products cached');
+
+      return result;
+
+    } catch (error) {
+        this.handleError(error, 'Get products error');
+        throw error;
+    }
+  }
+
+  async searchProducts(name: string, page: number = 1) {
+    this.logger.log(`Search products by name: ${name}, page: ${page}`);
+
+    try {
+      const limit = 10;
+      const offset = (page - 1) * limit;
+
+      const cacheKey = `product_search_${name}_page_${page}`;
+      const cached = await this.cacheManager.get(cacheKey);
+
+      if (cached) {
+        this.logger.log(`CACHE HIT: ${cacheKey}`);
+        return cached;
+      }
+
+      this.logger.warn(`CACHE MISS: ${cacheKey}`);
+
+      const { rows, count } = await this.productModel.findAndCountAll({
+        where: {
+          name: {
+            [Op.like]: `%${name}%`
+          }
+        },
+        attributes: ['code', 'name', 'unit', 'price', 'origin', 'note'],
+        limit,
+        offset,
+        order: [['createdAt', 'DESC']]
+      });
+
+      const result = {
+        total: count,
+        page,
+        totalPages: Math.ceil(count / limit),
+        data: rows
+      };
+      await this.cacheManager.set(cacheKey, result, 60);
+      this.logger.log('Product search cached');
+
+      return result;
+
+    } catch (error) {
+      this.handleError(error, 'Search product error');
+      throw error;
+    }
+  }
+
+  async updateProduct(code: string, dto: CreateProductDto) {
+    this.logger.log(`Update product attempt: ${code}`);
+
+    try {
+      const product = await this.productModel.findOne({where: {code}});
+
+      if (!product) {
+        this.logger.warn(`Update product failed - product not found: ${code}`);
+        throw new NotFoundException('Product not found');
+      }
+
+      await product.update({name: dto.name,unit: dto.unit,price: dto.price, origin: dto.origin, note: dto.note});
+
+      await this.cacheManager.del(`product_${code}`);
+      await this.cacheManager.del('products_all');
+
+      this.logger.log('CACHE INVALIDATED: product cache');
+      this.logger.log(`Product updated successfully: ${code}`);
+
+      return product;
+
+    } catch (error) {
+        this.handleError(error, 'Update product error');
+        throw error;
+    }
+  }
+
+  async deleteProduct(code: string) {
+  this.logger.log(`Delete product attempt: ${code}`);
+
+  try {
+    const product = await this.productModel.findOne({
+      where: { code }
+    });
+
+    if (!product) {
+      this.logger.warn(`Delete failed - product not found: ${code}`);
+      throw new NotFoundException('Product not found');
+    }
+
+    await product.destroy();
+
+    // clear cache
+    await this.cacheManager.del(`product_${code}`);
+    await this.cacheManager.del('products_all');
+
+    this.logger.log('CACHE INVALIDATED: product cache');
+    this.logger.log(`Product deleted successfully: ${code}`);
+
+    return { message: 'Product deleted successfully' };
+
+  } catch (error) {
+    this.handleError(error, 'Delete product error');
+    throw error;
+  }
+}
 }

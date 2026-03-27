@@ -3,7 +3,7 @@ import { AppService } from '../service/app.service';
 import { CreateUserDto, LoginDto} from "../dto/user.dto";
 import { AuthGuard } from '../common/guards/auth.guard';
 import {PermissionGuard} from '../common/guards/PermissionGuard'
-import { Roles,Permissions } from '../common/guards/roles.decorator';
+import { Permissions } from '../common/guards/roles.decorator';
 import { Public } from '../common/guards/public.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody,ApiBearerAuth  } from '@nestjs/swagger';
 import { CacheInterceptor } from '@nestjs/cache-manager';
@@ -22,9 +22,8 @@ export class AppController {
   @ApiResponse({status:200, description:'Success'})
   @Permissions('GET.USER')
   getAll(
-    @Query('page') page: number,
-    @Query('limit') limit: number,){
-    return this.userService.getUser(page, limit);
+    @Query('page') page: number,){
+    return this.userService.getUser(page);
   }
 
   @Post()

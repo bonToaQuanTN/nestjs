@@ -23,7 +23,7 @@ export class RoleController {
   @Permissions('POST.ROLE')
   createRole(@Body() dto: createRoleDto ) {
     const { name, RoleId } = dto;
-    return this.roleService.createRole(name,RoleId);
+    return this.roleService.createRole(name);
   }
 
   @Delete(':id')

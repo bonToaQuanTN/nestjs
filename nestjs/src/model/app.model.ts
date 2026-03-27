@@ -3,7 +3,8 @@ import {Role} from "./app.modelRoles";
 
 @Table({ 
     tableName: "Users",
-    version: true
+    version: true,
+    paranoid: true
 })
 export class Users extends Model{
     @PrimaryKey

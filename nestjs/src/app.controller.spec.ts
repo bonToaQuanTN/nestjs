@@ -127,14 +127,16 @@ describe('AppController', () => {
     const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
     const mockRoleModel = {findAll: jest.fn()};
     const mockPermissionModel = {findAll: jest.fn()};
-    const mockJwtService = {sign: jest.fn()};
+    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
     beforeEach(() => {
-      service = new AppService(mockUserModel as any,
+      service = new AppService(
+        mockUserModel as any,
         mockRoleModel as any,
         mockPermissionModel as any,
         mockCacheManager as any,
-        mockJwtService as any
+        mockJwtService as any,
+        mockLogger as any
       );
       (service as any).logger = mockLogger;
     });
@@ -193,11 +195,17 @@ describe('AppController', () => {
     const mockCacheManager = { get: jest.fn(), set: jest.fn() };
     const mockUserModel = { findOne: jest.fn() };
     const mockLogger = { log: jest.fn(), warn: jest.fn(), error: jest.fn() };
+    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
     beforeEach(() => {
       jest.clearAllMocks();
 
-      service = new AppService(mockUserModel as any,{} as any,{} as any,mockCacheManager as any,{} as any);
+      service = new AppService(mockUserModel as any,
+      {} as any,
+      {} as any,
+      mockCacheManager as any,
+      mockJwtService as any,
+      mockLogger as any);
       (service as any).logger = mockLogger;
     });
 
@@ -251,14 +259,18 @@ describe('AppController', () => {
     const mockCacheManager = {get: jest.fn(),set: jest.fn()};
     const mockUserModel = {findOne: jest.fn()};
     const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
+    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
     beforeEach(() => {
       jest.clearAllMocks();
       service = new AppService(
-        mockUserModel as any,{} as any,{} as any,
-        mockCacheManager as any,{} as any
-      );
-
+        mockUserModel as any,
+      {} as any,
+      {} as any,
+      mockCacheManager as any,
+      mockJwtService as any,
+      mockLogger as any
+    );
       (service as any).logger = mockLogger;;
     });
 
@@ -308,6 +320,7 @@ describe('AppController', () => {
     const mockUserModel = {findOne: jest.fn(),create: jest.fn()};
     const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
     const mockCacheManager = {get: jest.fn(),set: jest.fn()};
+    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
     beforeEach(() => {
       service = new AppService(
@@ -315,7 +328,8 @@ describe('AppController', () => {
         {} as any,
         {} as any,
         mockCacheManager as any,
-        {} as any
+        mockJwtService as any,
+        mockLogger as any
       );
 
       (service as any).logger = mockLogger;;
@@ -370,6 +384,7 @@ describe('AppController', () => {
     const mockUserModel = {findOne: jest.fn()};
     const mockCacheManager = {del: jest.fn()};
     const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
+    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
     beforeEach(() => {
       jest.clearAllMocks();
@@ -379,44 +394,35 @@ describe('AppController', () => {
         {} as any,
         {} as any,
         mockCacheManager as any,
-        {} as any
+        mockJwtService as any,
+        mockLogger as any
       );
       (service as any).logger = mockLogger;;
     });
 
     it('should update user successfully', async () => {
       const id = '1';
-
       const dto = {name: 'Updated Name',email: 'updated@mail.com'};
-
       const currentUser = {id: '1',role: 'admin'};
-
       const mockUser = {update: jest.fn()};
 
       mockUserModel.findOne.mockResolvedValue(mockUser);
 
       const result = await service.updateUser(id, dto as any, currentUser);
-
       expect(mockUserModel.findOne).toHaveBeenCalledWith({where: { id: '1' }});
-
       expect(mockUser.update).toHaveBeenCalledWith({name: dto.name,email: dto.email,designation: undefined});
-
       expect(mockCacheManager.del).toHaveBeenCalledWith('user_1');
-
       expect(result).toEqual({message: 'User updated successfully'});
     });
 
     it('should throw NotFoundException if user not found', async () => {
       mockUserModel.findOne.mockResolvedValue(null);
-
       await expect(service.updateUser('1', {} as any, { id: '1', role: 'admin' })).rejects.toThrow(NotFoundException);
     });
 
     it('should throw ForbiddenException if user tries to update another profile', async () => {
       const mockUser = {update: jest.fn()};
-
       mockUserModel.findOne.mockResolvedValue(mockUser);
-
       const currentUser = {id: '2',role: 'user'};
 
       await expect(
@@ -478,57 +484,62 @@ describe('AppController', () => {
   });
 
   describe('searchUserByName', () => {
-  const mockUserModel = {findAll: jest.fn()};
+    const mockUserModel = {findAll: jest.fn()};
+    const mockCacheManager = {del: jest.fn()};
+    const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
+    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
-  const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
-
-  beforeEach(() => {
-    service = new AppService(mockUserModel as any,{} as any,{} as any,{} as any,{} as any);
-    (service as any).logger = mockLogger;
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('should return users matching name', async () => {
-    const users = [
-      { id: '221CTT026', name: 'Quan', email: 'quan@test.com', designation: 'Dev' }
-    ];
-
-    mockUserModel.findAll.mockResolvedValue(users);
-
-    const result = await service.searchUserByName('Quan');
-
-    expect(mockUserModel.findAll).toHaveBeenCalledWith({
-      where: { name: { [Op.like]: '%Quan%' } },
-      attributes: ['id', 'name', 'email', 'designation']
+    beforeEach(() => {
+      service = new AppService(
+        mockUserModel as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        mockJwtService as any,
+        mockLogger as any
+      );
+      (service as any).logger = mockLogger;
     });
 
-    expect(result).toEqual(users);
-    expect(mockLogger.log).toHaveBeenCalledWith('Search user by name: Quan');
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should return users matching name', async () => {
+      const users = [
+        { id: '221CTT026', name: 'Quan', email: 'quan@test.com', designation: 'Dev' }
+      ];
+
+      mockUserModel.findAll.mockResolvedValue(users);
+
+      const result = await service.searchUserByName('Quan');
+
+      expect(mockUserModel.findAll).toHaveBeenCalledWith({
+        where: { name: { [Op.like]: '%Quan%' } },
+        attributes: ['id', 'name', 'email', 'designation']
+      });
+
+      expect(result).toEqual(users);
+      expect(mockLogger.log).toHaveBeenCalledWith('Search user by name: Quan');
+    });
+
+    it('should return empty array if no user found', async () => {
+      mockUserModel.findAll.mockResolvedValue([]);
+
+      const result = await service.searchUserByName('Unknown');
+
+      expect(result).toEqual([]);
+      expect(mockUserModel.findAll).toHaveBeenCalled();
+    });
+
+    it('should throw error when database fails', async () => {
+      const error = new Error('DB error');
+      mockUserModel.findAll.mockRejectedValue(error);
+      await expect(service.searchUserByName('Quan')).rejects.toThrow('DB error');
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
   });
-
-  it('should return empty array if no user found', async () => {
-    mockUserModel.findAll.mockResolvedValue([]);
-
-    const result = await service.searchUserByName('Unknown');
-
-    expect(result).toEqual([]);
-    expect(mockUserModel.findAll).toHaveBeenCalled();
-  });
-
-  it('should throw error when database fails', async () => {
-    const error = new Error('DB error');
-
-    mockUserModel.findAll.mockRejectedValue(error);
-
-    await expect(service.searchUserByName('Quan')).rejects.toThrow('DB error');
-
-    expect(mockLogger.error).toHaveBeenCalled();
-  });
-
-});
     
 });
 

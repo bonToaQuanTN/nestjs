@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, NotFoundException, ForbiddenException , UnauthorizedException, BadRequestException, Inject, Logger } from '@nestjs/common';
 import {Users} from "../model/app.model";
 import {Role} from "../model/app.modelRoles";
-import {createRoleDto, CreateUserDto, LoginDto,PermissionDto, CreateProductDto} from "../dto/user.dto";
+import {createRoleDto, CreateUserDto, LoginDto,PermissionDto, CreateProductDto, CreateOrderDto} from "../dto/user.dto";
 import { InjectModel} from "@nestjs/sequelize";
 import * as bcrypt from "bcrypt";
 import { JwtService } from '@nestjs/jwt';
@@ -10,6 +10,8 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { Op } from 'sequelize';
 import {Product} from '../model/app.modelProduct';
+import {OrderItem} from '../model/app.modelItem';
+import {Order} from '../model/app.modelOrder';
 
 @Injectable()
 export class AppService {
@@ -25,6 +27,10 @@ export class AppService {
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
 
     @InjectModel(Product) private productModel: typeof Product,
+
+    @InjectModel(Order) private orderModel: typeof Order,
+    
+    @InjectModel(OrderItem) private orderItemModel: typeof OrderItem,
 
     private readonly jwtService: JwtService
   ) {}
@@ -688,5 +694,43 @@ export class AppService {
     this.handleError(error, 'Delete product error');
     throw error;
   }
-}
+  }
+
+  async createOrder(userId: string, data: CreateOrderDto) {
+
+    const { productId, quantity } = data;
+
+    this.logger.log(`Create order attempt - user: ${userId}, product: ${productId}`);
+
+    try {
+
+      const product = await this.productModel.findOne({
+        where: { code: productId }
+      });
+
+      if (!product) {
+        this.logger.warn(`Create order failed - product not found: ${productId}`);
+        throw new NotFoundException('Product not found');
+      }
+
+      const price = product.price;
+      const total = price * quantity;
+
+      const order = await this.orderModel.create({
+        userId
+      });
+
+      const orderItem = await this.orderItemModel.create({orderId: order.id,productId,quantity,price,total});
+
+      this.logger.log(`Order created successfully: ${order.id}`);
+
+      return {orderId: order.id,product: product.name,quantity,price,total};
+
+    } catch (error) {
+      this.handleError(error, 'Create order error');
+      throw error;
+    }
+  }
+
+  
 }

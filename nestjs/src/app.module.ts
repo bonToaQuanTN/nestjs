@@ -16,6 +16,8 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import {Product} from './model/app.modelProduct';
 import {ProductController} from './controller/app.controllerProduct'
+import {OrderItem} from './model/app.modelItem'
+import {Order} from './model/app.modelOrder'
 
 @Module({
   imports: [
@@ -39,7 +41,14 @@ import {ProductController} from './controller/app.controllerProduct'
       })
     }),
 
-    SequelizeModule.forFeature([Role, Users,Permission,Product]),
+    SequelizeModule.forFeature([
+      Role,
+      Users,
+      Permission,
+      Product,
+      Order,
+      OrderItem
+    ]),
     
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -62,7 +71,13 @@ import {ProductController} from './controller/app.controllerProduct'
       })
     })
   ],
-  controllers: [AppController,RoleController,permissionController,UploadController,ProductController],
+  controllers: [
+    AppController,
+    RoleController,
+    permissionController,
+    UploadController,
+    ProductController
+  ],
   providers: [AppService,UploadService]
 })
 export class AppModule {}

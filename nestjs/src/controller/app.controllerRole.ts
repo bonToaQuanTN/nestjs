@@ -1,10 +1,10 @@
-import { Controller, Get, Post, Put, Body, Req, Delete, Patch, Param, UseGuards, Query } from '@nestjs/common';
+import { Controller, Get, Post, Body,Delete, Patch, Param, UseGuards } from '@nestjs/common';
 import { AppService } from '../service/app.service';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags,  ApiBearerAuth } from '@nestjs/swagger';
 import { createRoleDto } from "../dto/user.dto";
 import { AuthGuard } from '../common/guards/auth.guard';
 import {PermissionGuard} from '../common/guards/PermissionGuard'
-import { Roles,Permissions } from '../common/guards/roles.decorator';
+import { Permissions } from '../common/guards/roles.decorator';
 
 @ApiTags('roles')
 @UseGuards(AuthGuard,PermissionGuard)

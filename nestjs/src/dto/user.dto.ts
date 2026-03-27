@@ -73,3 +73,13 @@ export class CreateProductDto {
   @ApiProperty({ required: false })
   note!: string;
 }
+
+export class CreateOrderDto {
+
+  @ApiProperty()
+  productId!: string;
+
+  @ApiProperty()
+  quantity!: number;
+
+}

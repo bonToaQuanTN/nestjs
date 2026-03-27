@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Req, Delete, Patch, Param, UseGuards, Query,UseInterceptors  } from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Req, Delete, Param, UseGuards, Query,UseInterceptors  } from '@nestjs/common';
 import { AppService } from '../service/app.service';
 import { CreateUserDto, LoginDto} from "../dto/user.dto";
 import { AuthGuard } from '../common/guards/auth.guard';

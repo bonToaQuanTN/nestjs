@@ -1,6 +1,5 @@
 import { Injectable, BadRequestException,Logger } from '@nestjs/common';
 import { v2 as cloudinary } from 'cloudinary';
-import type { Express } from 'express';
 import * as fs from 'fs';
 
 @Injectable()

@@ -4,7 +4,7 @@ import {CreateProductDto} from '../dto/user.dto';
 import { AppService } from '../service/app.service';
 import { AuthGuard } from '../common/guards/auth.guard';
 import {PermissionGuard} from '../common/guards/PermissionGuard'
-import { Roles,Permissions } from '../common/guards/roles.decorator';
+import {Permissions } from '../common/guards/roles.decorator';
 
 @ApiTags('Products')
 @UseGuards(AuthGuard,PermissionGuard)

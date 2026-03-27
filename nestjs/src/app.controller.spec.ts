@@ -722,10 +722,16 @@ describe('createProduct', () => {
   const mockProductModel = {findOne: jest.fn(),create: jest.fn()};
   const mockCacheManager = {del: jest.fn()};
   const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
-  
 
   beforeEach(() => {
-    service = new AppService({} as any,{} as any,{} as any,mockCacheManager as any,{} as any,mockProductModel as any);
+    service = new AppService(
+      {} as any, // userModel
+      {} as any, // roleModel
+      {} as any, // permissionModel
+      mockCacheManager as any,
+      {} as any  // jwtService
+    );
+
     (service as any).productModel = mockProductModel;
     (service as any).logger = mockLogger;
 

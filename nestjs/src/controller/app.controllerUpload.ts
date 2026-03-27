@@ -1,10 +1,9 @@
 import {Controller, Post, UseInterceptors, UploadedFile,UseGuards   }from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from '../service/upload.service';
-import { ApiConsumes, ApiBody, ApiTags, ApiOperation, ApiResponse, ApiBearerAuth  } from '@nestjs/swagger';
+import { ApiConsumes, ApiBody, ApiOperation,  ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '../common/guards/auth.guard';
 import {PermissionGuard,} from '../common/guards/PermissionGuard'
-import { Roles,Permissions, } from '../common/guards/roles.decorator';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 

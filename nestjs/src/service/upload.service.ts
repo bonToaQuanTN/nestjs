@@ -29,24 +29,24 @@ export class UploadService {
     this.logger.log(`Uploading file: ${file.originalname}`);
     this.logger.log(`File path: ${file.path}`);
     return new Promise((resolve, reject) => {
-      cloudinary.uploader.upload_large(
-        file.path,
-        {
-          resource_type: 'auto',
-          folder: 'nestjs_upload',
-          chunk_size: 6000000
-        },
-        (error, result) => {
-
-          if (error || !result) {
-            this.logger.error('Upload failed', error);
-            return reject(error);
+      cloudinary.uploader.upload_large(file.path,{
+        resource_type: 'auto',
+        folder: 'nestjs_upload',
+        chunk_size: 6000000
+      },(error, result) => {
+        if (error || !result) {
+          this.logger.error('Upload failed', error);
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
           }
-          this.logger.log(`Upload success: ${result.secure_url}`);
-
-          resolve(result.secure_url);
+          return reject(error);
         }
-      )
+        this.logger.log(`Upload success: ${result.secure_url}`);
+        resolve(result.secure_url);
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+        }
+        })
     });
   }
    

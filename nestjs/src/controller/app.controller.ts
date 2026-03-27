@@ -21,8 +21,7 @@ export class AppController {
   @ApiOperation({summary:'Get all users'})
   @ApiResponse({status:200, description:'Success'})
   @Permissions('GET.USER')
-  getAll(
-    @Query('page') page: number,){
+  getAll(@Query('page') page: number){
     return this.userService.getUser(page);
   }
 

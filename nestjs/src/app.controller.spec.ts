@@ -12,62 +12,97 @@ import { BadRequestException,NotFoundException,ConflictException,ForbiddenExcept
 import * as bcrypt from "bcrypt";
 import { Reflector } from '@nestjs/core';
 import { Op } from 'sequelize';
+import * as fs from 'fs';
 
+jest.mock('cloudinary', () => ({
+  v2: {
+    config: jest.fn(),
+    uploader: {
+      upload_large: jest.fn(),
+    },
+  },
+}));
 
-jest.mock('cloudinary', () => {
-    const endMock = jest.fn();
+jest.mock('fs', () => ({
+  existsSync: jest.fn(),
+  unlinkSync: jest.fn(),
+}));
 
-    return {
-      v2: {
-        config: jest.fn(),
-        uploader: {
-          upload_stream: jest.fn(() => ({end: endMock}))
-        }
-      }
+describe('UploadService', () => {let service: UploadService;
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [UploadService],
+    }).compile();
+
+    service = module.get<UploadService>(UploadService);
+
+    (service as any).logger = {
+      log: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
     };
-});
+  });
 
-describe('UploadService', () => {
-    let service: UploadService;
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
 
-    beforeEach(async () => {
-      const module: TestingModule = await Test.createTestingModule({
-        providers: [UploadService]
-      }).compile();
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
 
-      service = module.get<UploadService>(UploadService);
-    });
+  it('should throw error if file missing', async () => {
+    await expect(service.uploadFile(null as any)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
 
-    it('should be defined', () => {
-      expect(service).toBeDefined();
-    });
+  it('should upload file and return url', async () => {
+    const mockFile: any = {
+      size: 1000,
+      originalname: 'test.jpg',
+      path: 'uploads/test.jpg',
+    };
 
-    it('should throw error if file missing', async () => {
-      await expect(service.uploadFile(null as any)).rejects.toThrow(
-        BadRequestException
-      );
-    });
+    const mockUrl = 'http://cloudinary.com/test.jpg';
 
-    it('should upload file and return url', async () => {
-      const mockFile: any = {
-        buffer: Buffer.from('test file')
-      };
+    (cloudinary.uploader.upload_large as jest.Mock).mockImplementation(
+      (path, options, callback) => {
+        callback(null, { secure_url: mockUrl });
+      },
+    );
 
-      const mockUrl = 'http://cloudinary.com/test.jpg';
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
 
-      (cloudinary.uploader.upload_stream as jest.Mock).mockImplementation((options, callback) => {
-          callback(null, { secure_url: mockUrl });
-          return {
-            end: jest.fn()
-          };
-        }
-      );
+    const result = await service.uploadFile(mockFile);
 
-      const result = await service.uploadFile(mockFile);
+    expect(result).toBe(mockUrl);
 
-      expect(result).toBe(mockUrl);
-      expect(cloudinary.uploader.upload_stream).toHaveBeenCalled();
-    });
+    expect(cloudinary.uploader.upload_large).toHaveBeenCalled();
+
+    expect(fs.unlinkSync).toHaveBeenCalledWith('uploads/test.jpg');
+  });
+
+  it('should reject when upload fails', async () => {
+    const mockFile: any = {
+      size: 1000,
+      originalname: 'test.jpg',
+      path: 'uploads/test.jpg',
+    };
+
+    (cloudinary.uploader.upload_large as jest.Mock).mockImplementation(
+      (path, options, callback) => {
+        callback(new Error('Upload failed'), null);
+      },
+    );
+
+    (fs.existsSync as jest.Mock).mockReturnValue(true);
+
+    await expect(service.uploadFile(mockFile)).rejects.toThrow();
+
+    expect(fs.unlinkSync).toHaveBeenCalled();
+  });
 });
 
 jest.mock('bcrypt', () => ({
@@ -678,6 +713,82 @@ describe('RolesGuard', () => {
     guard.canActivate(context);
 
     expect(mockReflector.getAllAndOverride).toHaveBeenCalledWith('roles', [context.getHandler(),context.getClass()]);
+  });
+});
+
+describe('createProduct', () => {
+  let service: AppService;
+
+  const mockProductModel = {findOne: jest.fn(),create: jest.fn()};
+  const mockCacheManager = {del: jest.fn()};
+  const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
+  
+
+  beforeEach(() => {
+    service = new AppService({} as any,{} as any,{} as any,mockCacheManager as any,{} as any,mockProductModel as any);
+    (service as any).productModel = mockProductModel;
+    (service as any).logger = mockLogger;
+
+    jest.clearAllMocks();
+  });
+
+  const mockDto = {
+    name: 'Laptop',
+    unit: 'pcs',
+    price: 1000,
+    origin: 'USA',
+    note: 'Gaming laptop',
+  };
+
+  it('should create product successfully', async () => {
+    const createdProduct = { id: 1, ...mockDto };
+
+    mockProductModel.findOne.mockResolvedValue(null);
+    mockProductModel.create.mockResolvedValue(createdProduct);
+
+    const result = await service.createProduct(mockDto as any);
+
+    expect(mockProductModel.findOne).toHaveBeenCalledWith({
+      where: { name: 'Laptop' },
+    });
+
+    expect(mockProductModel.create).toHaveBeenCalled();
+
+    expect(mockCacheManager.del).toHaveBeenCalledWith('product_1');
+    expect(mockCacheManager.del).toHaveBeenCalledWith('products_all');
+
+    expect(result).toEqual(createdProduct);
+  });
+
+  it('should throw ConflictException if product exists', async () => {
+    mockProductModel.findOne.mockResolvedValue({ id: 1 });
+
+    await expect(service.createProduct(mockDto as any)).rejects.toThrow(
+      ConflictException,
+    );
+
+    expect(mockLogger.warn).toHaveBeenCalled();
+  });
+
+  it('should invalidate cache after creating product', async () => {
+    const createdProduct = { id: 2, ...mockDto };
+
+    mockProductModel.findOne.mockResolvedValue(null);
+    mockProductModel.create.mockResolvedValue(createdProduct);
+
+    await service.createProduct(mockDto as any);
+
+    expect(mockCacheManager.del).toHaveBeenCalledWith('product_2');
+    expect(mockCacheManager.del).toHaveBeenCalledWith('products_all');
+  });
+
+  it('should throw error when database fails', async () => {
+    mockProductModel.findOne.mockResolvedValue(null);
+    mockProductModel.create.mockRejectedValue(new Error('DB error'));
+
+    await expect(service.createProduct(mockDto as any)).rejects.toThrow(
+      'DB error',
+    );
   });
 });
 

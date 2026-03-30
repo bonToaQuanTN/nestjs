@@ -14,6 +14,13 @@ import { Reflector } from '@nestjs/core';
 import { Op } from 'sequelize';
 import * as fs from 'fs';
 
+const mockUserModel = {};
+const mockRoleModel = {};
+const mockPermissionModel = {};
+const mockProductModel = {};
+const mockOrderModel = {};
+const mockOrderItemModel = {};
+
 jest.mock('cloudinary', () => ({
   v2: {
     config: jest.fn(),
@@ -66,7 +73,6 @@ describe('UploadService', () => {let service: UploadService;
     };
 
     const mockUrl = 'http://cloudinary.com/test.jpg';
-
     (cloudinary.uploader.upload_large as jest.Mock).mockImplementation(
       (path, options, callback) => {
         callback(null, { secure_url: mockUrl });
@@ -74,13 +80,9 @@ describe('UploadService', () => {let service: UploadService;
     );
 
     (fs.existsSync as jest.Mock).mockReturnValue(true);
-
     const result = await service.uploadFile(mockFile);
-
     expect(result).toBe(mockUrl);
-
     expect(cloudinary.uploader.upload_large).toHaveBeenCalled();
-
     expect(fs.unlinkSync).toHaveBeenCalledWith('uploads/test.jpg');
   });
 
@@ -116,12 +118,33 @@ describe('AppController', () => {
 
   const mockService = {
     getUser: jest.fn(),
-      createUser: jest.fn(),
-      getByUserId: jest.fn(),
-      updateUser: jest.fn(),
-      deleteUser: jest.fn(),
-      login: jest.fn(),
+    createUser: jest.fn(),
+    getByUserId: jest.fn(),
+    updateUser: jest.fn(),
+    deleteUser: jest.fn(),
+    login: jest.fn(),
   };
+
+  const mockCacheManager = {get: jest.fn(),set: jest.fn(),del: jest.fn()};
+  const mockUserModel = {findAndCountAll: jest.fn(),findOne: jest.fn(),create: jest.fn(),findAll: jest.fn()};
+  const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
+  const mockRoleModel = {findAll: jest.fn()};
+  const mockPermissionModel = {findAll: jest.fn()};
+  const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
+
+  beforeEach(() => {
+    service = new AppService(
+      mockUserModel as any,
+      mockRoleModel as any,
+      mockPermissionModel as any,
+      mockCacheManager as any,
+      mockJwtService as any,
+      mockLogger as any,
+      mockOrderItemModel as any,
+      mockJwtService as any
+    );
+    (service as any).logger = mockLogger;
+    });
 
   beforeEach(async () => {
       const module: TestingModule = await Test.createTestingModule({
@@ -156,25 +179,6 @@ describe('AppController', () => {
   });
 
   describe('getAll', () => {
-
-    const mockCacheManager = {get: jest.fn(),set: jest.fn()};
-    const mockUserModel = {findAndCountAll: jest.fn()};
-    const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
-    const mockRoleModel = {findAll: jest.fn()};
-    const mockPermissionModel = {findAll: jest.fn()};
-    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
-
-    beforeEach(() => {
-      service = new AppService(
-        mockUserModel as any,
-        mockRoleModel as any,
-        mockPermissionModel as any,
-        mockCacheManager as any,
-        mockJwtService as any,
-        mockLogger as any
-      );
-      (service as any).logger = mockLogger;
-    });
 
     afterEach(() => {
       jest.clearAllMocks();
@@ -227,21 +231,9 @@ describe('AppController', () => {
   });
 
   describe('login', () => {
-    const mockCacheManager = { get: jest.fn(), set: jest.fn() };
-    const mockUserModel = { findOne: jest.fn() };
-    const mockLogger = { log: jest.fn(), warn: jest.fn(), error: jest.fn() };
-    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
     beforeEach(() => {
       jest.clearAllMocks();
-
-      service = new AppService(mockUserModel as any,
-      {} as any,
-      {} as any,
-      mockCacheManager as any,
-      mockJwtService as any,
-      mockLogger as any);
-      (service as any).logger = mockLogger;
     });
 
     it('should return user from cache (CACHE HIT)', async () => {
@@ -291,22 +283,9 @@ describe('AppController', () => {
   });
 
   describe('getByUserId', () => {
-    const mockCacheManager = {get: jest.fn(),set: jest.fn()};
-    const mockUserModel = {findOne: jest.fn()};
-    const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
-    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
     beforeEach(() => {
       jest.clearAllMocks();
-      service = new AppService(
-        mockUserModel as any,
-      {} as any,
-      {} as any,
-      mockCacheManager as any,
-      mockJwtService as any,
-      mockLogger as any
-    );
-      (service as any).logger = mockLogger;;
     });
 
     it('should return user from cache (CACHE HIT)', async () => {
@@ -351,25 +330,6 @@ describe('AppController', () => {
   });
 
   describe('create', () => {
-    let service: AppService;
-    const mockUserModel = {findOne: jest.fn(),create: jest.fn()};
-    const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
-    const mockCacheManager = {get: jest.fn(),set: jest.fn()};
-    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
-
-    beforeEach(() => {
-      service = new AppService(
-        mockUserModel as any,
-        {} as any,
-        {} as any,
-        mockCacheManager as any,
-        mockJwtService as any,
-        mockLogger as any
-      );
-
-      (service as any).logger = mockLogger;;
-    });
-
     afterEach(() => {
       jest.clearAllMocks();
     });
@@ -415,26 +375,6 @@ describe('AppController', () => {
   });
 
   describe('updateUser', () => {
-    let service: AppService;
-    const mockUserModel = {findOne: jest.fn()};
-    const mockCacheManager = {del: jest.fn()};
-    const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
-    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
-
-    beforeEach(() => {
-      jest.clearAllMocks();
-
-      service = new AppService(
-        mockUserModel as any,
-        {} as any,
-        {} as any,
-        mockCacheManager as any,
-        mockJwtService as any,
-        mockLogger as any
-      );
-      (service as any).logger = mockLogger;;
-    });
-
     it('should update user successfully', async () => {
       const id = '1';
       const dto = {name: 'Updated Name',email: 'updated@mail.com'};
@@ -471,13 +411,9 @@ describe('AppController', () => {
       };
 
       mockUserModel.findOne.mockResolvedValue(mockUser);
-
       const currentUser = {id: '2',role: 'manager'};
-
       const result = await service.updateUser('1',{ name: 'Manager Update' } as any,currentUser);
-
       expect(mockUser.update).toHaveBeenCalled();
-
       expect(result).toEqual({
         message: 'User updated successfully',
       });
@@ -489,13 +425,9 @@ describe('AppController', () => {
       };
 
       mockUserModel.findOne.mockResolvedValue(mockUser);
-
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
-
       await service.updateUser('1',{ password: '123456' } as any,{ id: '1', role: 'admin' });
-
       expect(bcrypt.hash).toHaveBeenCalledWith('123456', 10);
-
       expect(mockUser.update).toHaveBeenCalledWith({name: undefined,email: undefined,designation: undefined,password: 'hashedPassword'});
     });
 
@@ -519,31 +451,12 @@ describe('AppController', () => {
   });
 
   describe('searchUserByName', () => {
-    const mockUserModel = {findAll: jest.fn()};
-    const mockCacheManager = {del: jest.fn()};
-    const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
-    const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
-
-    beforeEach(() => {
-      service = new AppService(
-        mockUserModel as any,
-        {} as any,
-        {} as any,
-        {} as any,
-        mockJwtService as any,
-        mockLogger as any
-      );
-      (service as any).logger = mockLogger;
-    });
-
     afterEach(() => {
       jest.clearAllMocks();
     });
 
     it('should return users matching name', async () => {
-      const users = [
-        { id: '221CTT026', name: 'Quan', email: 'quan@test.com', designation: 'Dev' }
-      ];
+      const users = [{ id: '221CTT026', name: 'Quan', email: 'quan@test.com', designation: 'Dev' }];
 
       mockUserModel.findAll.mockResolvedValue(users);
 
@@ -574,8 +487,7 @@ describe('AppController', () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-  });
-    
+  }); 
 });
 
 describe('AuthGuard', () => {
@@ -722,14 +634,18 @@ describe('createProduct', () => {
   const mockProductModel = {findOne: jest.fn(),create: jest.fn()};
   const mockCacheManager = {del: jest.fn()};
   const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
+  const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
   beforeEach(() => {
     service = new AppService(
-      {} as any, // userModel
-      {} as any, // roleModel
-      {} as any, // permissionModel
+      mockUserModel as any,
+      mockRoleModel as any,
+      mockPermissionModel as any,
       mockCacheManager as any,
-      {} as any  // jwtService
+      mockJwtService as any,
+      mockLogger as any,
+      mockOrderItemModel as any,
+      mockLogger as any
     );
 
     (service as any).productModel = mockProductModel;

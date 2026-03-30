@@ -8,13 +8,12 @@ import { Roles } from '../common/guards/roles.decorator';
 
 
 @Controller('Order')
-export class permissionController{
+export class orderController{
   constructor( private readonly orderService: AppService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create order' })
-  createOrder(@Body() dto: CreateOrderDto,@Req() req: any) {
-    const userId = req.user.id;
-    return this.orderService.createOrder(userId, dto);
+    createOrder(@Body('userId') userId: string) {
+    return this.orderService.createOrder(userId);
   }
 }

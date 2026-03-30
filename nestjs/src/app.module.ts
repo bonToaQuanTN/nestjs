@@ -4,6 +4,8 @@ import { RoleController }from './controller/app.controllerRole';
 import { permissionController } from './controller/app.controllerPermission';
 import { UploadController }from './controller/app.controllerUpload';
 import { UploadService } from './service/upload.service';
+import { orderController } from './controller/app.controllerOrder'
+import {  orderItemController } from './controller/app.controllerItem'
 import { AppService } from './service/app.service';
 import { SequelizeModule } from "@nestjs/sequelize";
 import { Users } from './model/app.model';
@@ -76,7 +78,9 @@ import {Order} from './model/app.modelOrder'
     RoleController,
     permissionController,
     UploadController,
-    ProductController
+    ProductController,
+    orderItemController,
+    orderController
   ],
   providers: [AppService,UploadService]
 })

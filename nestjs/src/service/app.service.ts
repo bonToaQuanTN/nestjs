@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, NotFoundException, ForbiddenException , UnauthorizedException, BadRequestException, Inject, Logger } from '@nestjs/common';
 import {Users} from "../model/app.model";
 import {Role} from "../model/app.modelRoles";
-import {createRoleDto, CreateUserDto, LoginDto,PermissionDto, CreateProductDto, CreateOrderDto} from "../dto/user.dto";
+import {createRoleDto, CreateUserDto, LoginDto,PermissionDto, CreateProductDto, CreateOrderDto,CreateOrderItemDto} from "../dto/user.dto";
 import { InjectModel} from "@nestjs/sequelize";
 import * as bcrypt from "bcrypt";
 import { JwtService } from '@nestjs/jwt';
@@ -19,18 +19,13 @@ export class AppService {
 
   constructor(
     @InjectModel(Users) private userModel: typeof Users,
-
     @InjectModel(Role) private roleModel: typeof Role,
-
     @InjectModel(Permission) private permissionModel: typeof Permission,
-
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
-
     @InjectModel(Product) private productModel: typeof Product,
-
     @InjectModel(Order) private orderModel: typeof Order,
-    
     @InjectModel(OrderItem) private orderItemModel: typeof OrderItem,
+
 
     private readonly jwtService: JwtService
   ) {}
@@ -696,41 +691,100 @@ export class AppService {
   }
   }
 
-  async createOrder(userId: string, data: CreateOrderDto) {
+ async createOrder(userId: string) {
+  this.logger.log(`Create order attempt for user: ${userId}`);
 
-    const { productId, quantity } = data;
+  try {
+    const order = await this.orderModel.create({userId});
+    this.logger.log(`Order created successfully: ${order.id}`);
+    return order;
 
-    this.logger.log(`Create order attempt - user: ${userId}, product: ${productId}`);
+  }catch (error) {
+    this.handleError(error, 'Create order error');
+    throw error;
+  }
+}
+
+  async createOrderItem(data: CreateOrderItemDto) {
+    const { orderId, productId, quantity } = data;
+    this.logger.log(`Create order item attempt - order: ${orderId}, product: ${productId}`);
 
     try {
+      const product = await this.productModel.findOne({where: { code: productId }});
+      if (!product) {
+        this.logger.warn(`Create order item failed - product not found: ${productId}`);
+        throw new NotFoundException('Product not found');
+      }
+      if (!product) {throw new NotFoundException('Product not found');}
+      const price = product.price;
+      const total = quantity * price;
+      const item = await this.orderItemModel.create({orderId,productId,quantity,price,total});
+      this.logger.log(`Order item created successfully - order: ${orderId}, product: ${productId}, quantity: ${quantity}, total: ${total}`);
+      return item;
 
-      const product = await this.productModel.findOne({
-        where: { code: productId }
-      });
+      } catch (error) {
+        this.handleError(error, 'Create order item error');
+        throw error;
+      }
+  }
+
+  async findAll() {
+    return this.orderItemModel.findAll();
+  }
+
+  async findByOrder(orderId: string) {
+    return this.orderItemModel.findAll({where: { orderId }});
+  }
+
+  async updateOrderItem(id: string, data: CreateOrderItemDto) {
+
+    const { productId, quantity } = data;
+    this.logger.log(`Update order item attempt: ${id}`);
+
+    try {
+      const item = await this.orderItemModel.findByPk(id);
+      if (!item) {
+        this.logger.warn(`Update failed - order item not found: ${id}`);
+        throw new NotFoundException('Order item not found');
+      }
+      const product = await this.productModel.findOne({where: { code: productId }});
 
       if (!product) {
-        this.logger.warn(`Create order failed - product not found: ${productId}`);
+        this.logger.warn(`Update failed - product not found: ${productId}`);
         throw new NotFoundException('Product not found');
       }
 
       const price = product.price;
       const total = price * quantity;
 
-      const order = await this.orderModel.create({
-        userId
-      });
+      await item.update({productId,quantity,price,total});
 
-      const orderItem = await this.orderItemModel.create({orderId: order.id,productId,quantity,price,total});
+      this.logger.log(`Order item updated successfully: ${id}`);
 
-      this.logger.log(`Order created successfully: ${order.id}`);
-
-      return {orderId: order.id,product: product.name,quantity,price,total};
+      return item;
 
     } catch (error) {
-      this.handleError(error, 'Create order error');
+      this.handleError(error, 'Update order item error');
       throw error;
     }
   }
 
-  
+  async deleteOrderItem(id: string) {
+    this.logger.log(`Delete order item attempt: ${id}`);
+    try {
+      const item = await this.orderItemModel.findByPk(id);
+      if (!item) {
+        this.logger.warn(`Delete failed - order item not found: ${id}`);
+        throw new NotFoundException('Order item not found');
+      }
+
+      await item.destroy();
+      this.logger.log(`Order item soft deleted successfully: ${id}`);
+      return {message: 'Order item deleted successfully'};
+
+    } catch (error) {
+      this.handleError(error, 'Delete order item error');
+      throw error;
+    }
+  }
 }

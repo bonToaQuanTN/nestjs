@@ -1,4 +1,4 @@
-import { IsEmail, IsString, IsNotEmpty, IsNumber } from "class-validator";
+import { IsEmail, IsString, IsNotEmpty, IsNumber,IsUUID, IsInt } from "class-validator";
 import { Transform } from "class-transformer";
 import { ApiProperty } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
@@ -76,10 +76,18 @@ export class CreateProductDto {
 
 export class CreateOrderDto {
 
-  @ApiProperty()
+  @ApiProperty({example:"221CTT026"})
+  userId!: string;
+}
+
+export class CreateOrderItemDto {
+
+  @IsUUID()
+  orderId!: string;
+
+  @IsString()
   productId!: string;
 
-  @ApiProperty()
+  @IsInt()
   quantity!: number;
-
 }

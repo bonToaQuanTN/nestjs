@@ -16,16 +16,17 @@ export class OrderItem extends Model {
 
     @ForeignKey(() => Order)
     @Column ({type: DataType.UUID})declare orderId: string;
-
     @ForeignKey(() => Product)
-    @Column({type: DataType.STRING})declare productId: string;
+
+    @Default(DataType.UUIDV4)
+    @Column({type: DataType.UUID })declare productId: string;
 
     @Column({type: DataType.INTEGER})declare quantity: number;
 
     @Column ({type: DataType.FLOAT})declare price: number;
 
     @Column({type: DataType.INTEGER})declare total: number;
-
+    
     @BelongsTo(() => Product)declare product: Product;
 
 }

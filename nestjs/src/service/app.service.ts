@@ -703,7 +703,7 @@ export class AppService {
     this.handleError(error, 'Create order error');
     throw error;
   }
-}
+  }
 
   async createOrderItem(data: CreateOrderItemDto) {
     const { orderId, productId, quantity } = data;
@@ -728,12 +728,42 @@ export class AppService {
       }
   }
 
-  async findAll() {
-    return this.orderItemModel.findAll();
+  async getAllOrderItem(page = 1, limit = 10) {
+    const offset = (page - 1) * limit;
+    const cacheKey = `order_items_page_${page}_limit_${limit}`;
+    const cached = await this.cacheManager.get(cacheKey);
+
+    if (cached) {
+      this.logger.log(`CACHE HIT: ${cacheKey}`);
+      return cached;
+    }
+
+    this.logger.warn(`CACHE MISS: ${cacheKey}`);
+
+    const { rows, count } = await this.orderItemModel.findAndCountAll({limit,offset});
+
+    const result = {
+      data: rows,
+      pagination: {total: count,page,limit,totalPages: Math.ceil(count / limit)}
+    };
+
+    await this.cacheManager.set(cacheKey, result, 60);
+    return result;
   }
 
   async findByOrder(orderId: string) {
-    return this.orderItemModel.findAll({where: { orderId }});
+    const cacheKey = `order_items_${orderId}`;
+    const cached = await this.cacheManager.get(cacheKey);
+
+    if (cached) {
+      this.logger.log(`CACHE HIT: ${cacheKey}`);
+      return cached;
+    }
+
+    this.logger.warn(`CACHE MISS: ${cacheKey}`);
+    const items = await this.orderItemModel.findAll({where: { orderId }});
+    await this.cacheManager.set(cacheKey, items, 60000);
+    return items;
   }
 
   async updateOrderItem(id: string, data: CreateOrderItemDto) {

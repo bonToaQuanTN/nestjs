@@ -23,7 +23,6 @@ export class UploadService {
     if (!file) {
       throw new BadRequestException('File is required');
     }
-
     const MAX_SIZE = 100 * 1024 * 1024; // 100MB
 
     this.logger.log(`Uploading file: ${file.originalname}`);
@@ -49,12 +48,12 @@ export class UploadService {
       }
     }
 
-    if (fs.existsSync(file.path)) {
-      fs.unlinkSync(file.path);
-    }
+      if (fs.existsSync(file.path)) {
+        fs.unlinkSync(file.path);
+      }
 
-    return urls;
-  }
+      return urls;
+    }
 
   async uploadToCloudinary(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -79,7 +78,6 @@ export class UploadService {
     return new Promise((resolve, reject) => {
       const outputDir = path.dirname(filePath);
       const fileName = path.basename(filePath, path.extname(filePath));
-
       const outputPattern = `${outputDir}/${fileName}_part_%03d.mp4`;
 
       const parts: string[] = [];

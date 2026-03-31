@@ -9,6 +9,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBody,ApiBearerAuth  } from '@nes
 import { CacheInterceptor } from '@nestjs/cache-manager';
 
 @Controller('order-items')
+@UseGuards(AuthGuard,PermissionGuard)
 @ApiBearerAuth()
 export class orderItemController {
     constructor( private readonly orderItemService: AppService) {}
@@ -21,8 +22,8 @@ export class orderItemController {
 
     @Get()
     @Permissions('GET.ITEM')
-    async findAll() {
-        return this.orderItemService.findAll();
+    async findAll(@Query('page') page: number = 1) {
+        return this.orderItemService.getAllOrderItem(page);
     }
 
     @Get(':orderId')

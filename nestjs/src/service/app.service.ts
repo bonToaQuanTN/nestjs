@@ -787,4 +787,114 @@ export class AppService {
       throw error;
     }
   }
+
+  async getOrders(page: number = 1) {
+    this.logger.log(`Get orders page: ${page}`);
+
+  try {
+    const limit = 5;
+    const offset = (page - 1) * limit;
+
+    const { rows, count } = await this.orderModel.findAndCountAll({
+      include: [{ model: OrderItem }],
+      limit,
+      offset,
+      order: [['createdAt', 'DESC']]
+    });
+
+    const orders = rows.map(order => {
+
+      const totalAmount = order.items.reduce(
+        (sum, item) => sum + item.total,
+        0
+      );
+
+      return {
+        ...order.toJSON(),
+        totalAmount
+      };
+
+    });
+
+    this.logger.log(`Orders fetched successfully: ${orders.length}`);
+
+    return {
+      page,
+      limit,
+      totalOrders: count,
+      totalPages: Math.ceil(count / limit),
+      data: orders
+    };
+
+    }catch (error) {
+      this.handleError(error, 'Get orders error');
+      throw error;
+    }
+  }
+
+  async updateOrder(id: string, userId: string) {
+    this.logger.log(`Update order attempt: ${id}`);
+    try {
+      const order = await this.orderModel.findByPk(id);
+      if (!order) {
+        this.logger.warn(`Update failed - order not found: ${id}`);
+        throw new NotFoundException('Order not found');
+      }
+
+      await order.update({ userId });
+      this.logger.log(`Order updated successfully: ${id}`);
+      return order;
+
+    }catch (error) {
+      this.handleError(error, 'Update order error');
+      throw error;
+    }
+  }
+
+  async deleteOrder(id: string) {
+    this.logger.log(`Delete order attempt: ${id}`);
+    try {
+      const order = await this.orderModel.findByPk(id);
+      if (!order) {
+        this.logger.warn(`Delete failed - order not found: ${id}`);
+        throw new NotFoundException('Order not found');
+      }
+      await order.destroy();
+      this.logger.log(`Order soft deleted successfully: ${id}`);
+      return {message: 'Order deleted successfully'};
+
+    } catch (error) {
+      this.handleError(error, 'Delete order error');
+      throw error;
+    }
+  }
+
+  async getOrderById(id: string) {
+    this.logger.log(`Get order by id: ${id}`);
+    try {
+      const order = await this.orderModel.findByPk(id, {
+        include: [
+          {
+            model: OrderItem,
+            attributes: ['productId', 'quantity', 'price', 'total']
+          }
+        ]
+      });
+
+      if (!order) {
+        this.logger.warn(`Order not found: ${id}`);
+        throw new NotFoundException('Order not found');
+      }
+
+      const orderTotal = order.items?.reduce((sum, item) => sum + item.total,0);
+      const result = {...order.toJSON(),orderTotal};
+      this.logger.log(`Order fetched successfully: ${id}`);
+      return result;
+
+    } catch (error) {
+      this.handleError(error, 'Get order by id error');
+      throw error;
+    }
+  }
+
 }

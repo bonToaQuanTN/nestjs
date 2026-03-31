@@ -2,6 +2,7 @@ import { IsEmail, IsString, IsNotEmpty, IsNumber,IsUUID, IsInt } from "class-val
 import { Transform } from "class-transformer";
 import { ApiProperty } from '@nestjs/swagger';
 import { diskStorage } from 'multer';
+import { AllowNull } from "sequelize-typescript";
 
 export class CreateUserDto{
 
@@ -75,19 +76,23 @@ export class CreateProductDto {
 }
 
 export class CreateOrderDto {
-
-  @ApiProperty({example:"221CTT026"})
+  @IsString()
+  @IsNotEmpty()
+  @ApiProperty({example:"ma nguoi dung"})
   userId!: string;
 }
 
 export class CreateOrderItemDto {
 
   @IsUUID()
+  @ApiProperty({example:" ma hoa don"})
   orderId!: string;
 
   @IsString()
+  @ApiProperty({example:"ma san pham"})
   productId!: string;
 
   @IsInt()
+  @ApiProperty({example:" so luong"})
   quantity!: number;
 }

@@ -14,26 +14,31 @@ export class orderItemController {
     constructor( private readonly orderItemService: AppService) {}
 
     @Post()
+    @Permissions('POST.ITEM')
     async create(@Body() body: CreateOrderItemDto) {
         return this.orderItemService.createOrderItem(body);
     }
 
     @Get()
+    @Permissions('GET.ITEM')
     async findAll() {
         return this.orderItemService.findAll();
     }
 
     @Get(':orderId')
+    @Permissions('GETID.ITEM')
     async findByOrder(@Param('orderId') orderId: string) {
         return this.orderItemService.findByOrder(orderId);
     }   
 
     @Put(':id')
+    @Permissions('PUT.ITEM')
     updateOrderItem(@Param('id') id: string,@Body() dto: CreateOrderItemDto){
         return this.orderItemService.updateOrderItem(id, dto);
     }
 
     @Delete(':id')
+    @Permissions('DELETE.ITEM')
     deleteOrderItem(@Param('id') id: string) {
         return this.orderItemService.deleteOrderItem(id);
     }

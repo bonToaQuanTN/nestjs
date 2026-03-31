@@ -1,12 +1,12 @@
 import { Controller, Get, Post, Put, Body, Req, Delete, Patch, Param, UseGuards,Query} from '@nestjs/common';
 import { AppService } from '../service/app.service';
-import { Permissions } from '../common/guards/roles.decorator';
+import { Permissions } from '../guards/roles.decorator';
 import { ApiTags, ApiBearerAuth,ApiOperation } from '@nestjs/swagger';
-import {PermissionGuard} from '../common/guards/PermissionGuard'
+import {PermissionGuard} from '../guards/PermissionGuard'
 import { CreateOrderDto } from "../dto/user.dto";
-import { AuthGuard } from '../common/guards/auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
-import { Roles } from '../common/guards/roles.decorator';
+import { AuthGuard } from '../guards/auth.guard';
+import { RolesGuard } from '../guards/roles.guard';
+import { Roles } from '../guards/roles.decorator';
 
 
 @Controller('Order')

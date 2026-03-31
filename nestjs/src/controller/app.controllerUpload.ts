@@ -2,8 +2,8 @@ import { Controller, Post, UseInterceptors, UploadedFile, UseGuards } from '@nes
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UploadService } from '../service/upload.service';
 import { ApiConsumes, ApiBody, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { AuthGuard } from '../common/guards/auth.guard';
-import { PermissionGuard } from '../common/guards/PermissionGuard';
+import { AuthGuard } from '../guards/auth.guard';
+import { PermissionGuard } from '../guards/PermissionGuard';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
 import * as fs from 'fs';

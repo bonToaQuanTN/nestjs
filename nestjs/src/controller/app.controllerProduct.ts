@@ -2,9 +2,9 @@ import { Controller, Get, Post, Put, Body, Req, Delete, Patch, Param, UseGuards,
 import { ApiTags, ApiOperation, ApiResponse, ApiBody,ApiBearerAuth  } from '@nestjs/swagger';
 import {CreateProductDto} from '../dto/user.dto';
 import { AppService } from '../service/app.service';
-import { AuthGuard } from '../common/guards/auth.guard';
-import {PermissionGuard} from '../common/guards/PermissionGuard'
-import {Permissions } from '../common/guards/roles.decorator';
+import { AuthGuard } from '../guards/auth.guard';
+import {PermissionGuard} from '../guards/PermissionGuard'
+import {Permissions } from '../guards/roles.decorator';
 
 @ApiTags('Products')
 @UseGuards(AuthGuard,PermissionGuard)

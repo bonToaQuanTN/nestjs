@@ -2,9 +2,9 @@ import { Controller, Get, Post, Body,Delete, Patch, Param, UseGuards } from '@ne
 import { AppService } from '../service/app.service';
 import { ApiTags,  ApiBearerAuth } from '@nestjs/swagger';
 import { createRoleDto } from "../dto/user.dto";
-import { AuthGuard } from '../common/guards/auth.guard';
-import {PermissionGuard} from '../common/guards/PermissionGuard'
-import { Permissions } from '../common/guards/roles.decorator';
+import { AuthGuard } from '../guards/auth.guard';
+import {PermissionGuard} from '../guards/PermissionGuard'
+import { Permissions } from '../guards/roles.decorator';
 
 @ApiTags('roles')
 @UseGuards(AuthGuard,PermissionGuard)

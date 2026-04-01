@@ -64,12 +64,11 @@ import {Order} from './model/app.modelOrder'
     }),
 
     CacheModule.registerAsync({
-      isGlobal: true,
-      useFactory: async () => ({
-        store: await redisStore({
-          socket: {host: '127.0.0.1', port: 6379}
-        }),
-        ttl: 60000
+      inject: [ConfigService],
+    useFactory: (config: ConfigService) => ({
+      store: redisStore,
+      host: config.get('REDIS_HOST'),
+      port: config.get('REDIS_PORT')
       })
     })
   ],

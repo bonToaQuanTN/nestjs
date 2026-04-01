@@ -55,12 +55,9 @@ export class AppService {
         this.logger.warn(`Create user failed - email exists: ${data.email}`);
         throw new ConflictException('Email already exists');
       }
+      await this.cacheManager.clear();
       this.logger.log(`User created successfully: ${data.email}`);
-      return await this.userModel.create({
-        ...data,
-        password: hashedPassword,
-        id
-      });
+      return await this.userModel.create({...data,password: hashedPassword,id});
       
     }catch(error){
       this.handleError(error,'Create user error');
@@ -81,7 +78,6 @@ export class AppService {
         return cached;
       }         
       this.logger.warn(`CACHE MISS: ${cacheKey}`);
-
       const offset = (page - 1) * limit;
 
       const { count, rows } = await this.userModel.findAndCountAll({
@@ -697,6 +693,7 @@ export class AppService {
   try {
     const order = await this.orderModel.create({userId});
     this.logger.log(`Order created successfully: ${order.id}`);
+    await this.cacheManager.clear();
     return order;
 
   }catch (error) {
@@ -719,6 +716,7 @@ export class AppService {
       const price = product.price;
       const total = quantity * price;
       const item = await this.orderItemModel.create({orderId,productId,quantity,price,total});
+      await this.cacheManager.clear();
       this.logger.log(`Order item created successfully - order: ${orderId}, product: ${productId}, quantity: ${quantity}, total: ${total}`);
       return item;
 
@@ -767,7 +765,6 @@ export class AppService {
   }
 
   async updateOrderItem(id: string, data: CreateOrderItemDto) {
-
     const { productId, quantity } = data;
     this.logger.log(`Update order item attempt: ${id}`);
 
@@ -788,7 +785,7 @@ export class AppService {
       const total = price * quantity;
 
       await item.update({productId,quantity,price,total});
-
+      await this.cacheManager.clear();
       this.logger.log(`Order item updated successfully: ${id}`);
 
       return item;
@@ -873,6 +870,7 @@ export class AppService {
 
       await order.update({ userId });
       this.logger.log(`Order updated successfully: ${id}`);
+      await this.cacheManager.clear();
       return order;
 
     }catch (error) {

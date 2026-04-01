@@ -66,5 +66,6 @@ export class AppController {
     login(@Body() data: LoginDto) {
     return this.userService.login(data);
   }
+  
 }
 

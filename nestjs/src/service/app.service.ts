@@ -355,28 +355,26 @@ export class AppService {
   async getAllPermissions() {
     this.logger.log('Fetching all permissions grouped by role');
 
-    try{
-      const permissions =await this.permissionModel.findAll({
-        include:[{ model: this.roleModel, attributes:['id','name']}]
+    try {
+      const permissions = await this.permissionModel.findAll({
+        attributes: ['id', 'name'],
+        include: [{model: this.roleModel,attributes: ['id','name']}]
       });
+
       const grouped = permissions.reduce((acc, perm) => {
-      const role = perm.Role;
+        const role = perm.Role;
+        if (!role) return acc;
 
-      if (!role) return acc;
+        const roleName = role.name;
+        if (!acc[roleName]) {
+          acc[roleName] = [];
+        }
+        acc[roleName].push({id: perm.id,name: perm.name});
+        return acc;
+      }, {} as Record<string,{ id: number; name: string }[]>);
 
-      const roleName = role.name;
-
-      if (!acc[roleName]) {
-        acc[roleName] = [];
-      }
-
-      acc[roleName].push(perm.name);
-
-      return acc;
-    }, {} as Record<string, string[]>);
-
-    this.logger.log('Permissions fetched successfully');
-    return grouped;
+      this.logger.log('Permissions fetched successfully');
+      return grouped;
     }catch(error){
       this.handleError(error,'Get permissions error');
       throw error;

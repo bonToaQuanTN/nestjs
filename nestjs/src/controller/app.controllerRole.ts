@@ -22,7 +22,7 @@ export class RoleController {
   @Post()
   @Permissions('POST.ROLE')
   createRole(@Body() dto: createRoleDto ) {
-    const { name, RoleId } = dto;
+    const { name } = dto;
     return this.roleService.createRole(name);
   }
 

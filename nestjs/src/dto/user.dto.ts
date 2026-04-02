@@ -39,10 +39,6 @@ export class createRoleDto{
   @ApiProperty({example:'user'})
   @IsNotEmpty()
   name!: string;
-
-  @ApiProperty({example:'1'})
-  @IsNotEmpty()
-  RoleId!: string;
 }
 
 export class PermissionDto {

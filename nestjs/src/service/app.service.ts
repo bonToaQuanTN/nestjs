@@ -156,14 +156,10 @@ export class AppService {
       }
 
       await user.update(updateData);
-
       await this.cacheManager.del(`user_${id}`);
+      await this.cacheManager.clear();
       this.logger.log(`CACHE INVALIDATED: user_${id}`);
-
-      await this.cacheManager.del(`user_${id}`);
-
       this.logger.log(`User updated successfully: ${id}`);
-
       return { message: 'User updated successfully' };
 
     } catch (error) {
@@ -186,6 +182,7 @@ export class AppService {
       await user.destroy();
 
       await this.cacheManager.del(`user_${id}`);
+      await this.cacheManager.clear();
       this.logger.log(`CACHE INVALIDATED: user_${id}`);
       this.logger.log(`User deleted successfully: ${id}`);
 
@@ -305,9 +302,7 @@ export class AppService {
 
   async deleteRole(id: string) {
 
-    const Role = await this.roleModel.findOne({
-      where: { id }
-    });
+    const Role = await this.roleModel.findOne({where: { id }});
 
     if (!Role) {
       throw new NotFoundException('Employee not found');

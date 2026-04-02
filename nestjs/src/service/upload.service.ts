@@ -5,11 +5,9 @@ import * as path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegPath from 'ffmpeg-static';
 
-  ffmpeg.setFfmpegPath(ffmpegPath as string);
-
+ffmpeg.setFfmpegPath(ffmpegPath as string);
 @Injectable()
 export class UploadService {
-
   private readonly logger = new Logger(UploadService.name);
   constructor() {
     cloudinary.config({
@@ -34,43 +32,31 @@ export class UploadService {
     }
 
     this.logger.warn('File > 100MB. Splitting video...');
-
     const parts = await this.splitVideo(file.path);
-
     const urls: string[] = [];
 
     for (const part of parts) {
       const url = await this.uploadToCloudinary(part);
       urls.push(url);
-
       if (fs.existsSync(part)) {
         fs.unlinkSync(part);
       }
     }
-
       if (fs.existsSync(file.path)) {
         fs.unlinkSync(file.path);
       }
-
       return urls;
     }
 
   async uploadToCloudinary(filePath: string): Promise<string> {
     return new Promise((resolve, reject) => {
       cloudinary.uploader.upload(
-        filePath,
-        {
-          resource_type: 'auto',
-          folder: 'nestjs_upload',
-        },
-        (error, result) => {
+        filePath,{resource_type: 'auto',folder: 'nestjs_upload'},(error, result)=>{
           if (error || !result) {
             return reject(error);
           }
-
           resolve(result.secure_url);
-        },
-      );
+        });
     });
   }
 
@@ -79,11 +65,10 @@ export class UploadService {
       const outputDir = path.dirname(filePath);
       const fileName = path.basename(filePath, path.extname(filePath));
       const outputPattern = `${outputDir}/${fileName}_part_%03d.mp4`;
-
       const parts: string[] = [];
 
       ffmpeg(filePath)
-        .outputOptions(['-c copy','-map 0','-segment_time 60', '-f segment','-reset_timestamps 1',])
+        .outputOptions(['-c copy','-map 0','-segment_time 60', '-f segment','-reset_timestamps 1'])
         .output(outputPattern)
         .on('end', () => {
           const files = fs.readdirSync(outputDir).filter((f) => f.startsWith(`${fileName}_part_`));

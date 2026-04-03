@@ -12,6 +12,7 @@ import { Op } from 'sequelize';
 import {Product} from '../model/app.modelProduct';
 import {OrderItem} from '../model/app.modelItem';
 import {Order} from '../model/app.modelOrder';
+import { Sequelize } from 'sequelize';
 
 @Injectable()
 export class AppService {
@@ -635,7 +636,17 @@ export class AppService {
       }
 
       await product.update({name: dto.name,unit: dto.unit,price: dto.price, origin: dto.origin, note: dto.note});
+      await this.orderItemModel.update(
+  {
+    price: dto.price,
+    total: Sequelize.literal(`quantity * ${dto.price}`),
+  },
+  {
+    where: { productId: product.code },
+  },
+);
 
+      await this.cacheManager.clear();
       await this.cacheManager.del(`product_${code}`);
       await this.cacheManager.del('products_all');
 
@@ -811,45 +822,40 @@ export class AppService {
   async getOrders(page: number = 1) {
     this.logger.log(`Get orders page: ${page}`);
 
-  try {
-    const limit = 5;
-    const offset = (page - 1) * limit;
+    try {
+      const limit = 5;
+      const offset = (page - 1) * limit;
 
-    const { rows, count } = await this.orderModel.findAndCountAll({
-      include: [{ model: OrderItem }],
-      limit,
-      offset,
-      order: [['createdAt', 'DESC']]
-    });
+      const { rows, count } = await this.orderModel.findAndCountAll({
+        include: [{ model: OrderItem }],
+        limit,
+        offset,
+        order: [['createdAt', 'DESC']]
+      });
 
-    const orders = rows.map(order => {
+      const orders = rows.map(order => {
 
-      const totalAmount = order.items.reduce(
-        (sum, item) => sum + item.total,
-        0
-      );
+        const totalAmount = order.items.reduce((sum, item) => sum + item.total,0);
+        return {
+          ...order.toJSON(),
+          totalAmount
+        };
 
+      });
+
+      this.logger.log(`Orders fetched successfully: ${orders.length}`);
       return {
-        ...order.toJSON(),
-        totalAmount
+        page,
+        limit,
+        totalOrders: count,
+        totalPages: Math.ceil(count / limit),
+        data: orders
       };
 
-    });
-
-    this.logger.log(`Orders fetched successfully: ${orders.length}`);
-
-    return {
-      page,
-      limit,
-      totalOrders: count,
-      totalPages: Math.ceil(count / limit),
-      data: orders
-    };
-
-    }catch (error) {
-      this.handleError(error, 'Get orders error');
-      throw error;
-    }
+      }catch (error) {
+        this.handleError(error, 'Get orders error');
+        throw error;
+      }
   }
 
   async updateOrder(id: string, userId: string) {
@@ -916,6 +922,15 @@ export class AppService {
       this.handleError(error, 'Get order by id error');
       throw error;
     }
+  }
+
+  async updateStatus(id: string, status: string) {
+    const order = await this.orderModel.findByPk(id);
+    if (!order) {
+      throw new NotFoundException('Order not found');
+    }
+    await order.update({ status });
+    return order;
   }
 
 }

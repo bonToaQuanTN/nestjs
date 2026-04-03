@@ -16,4 +16,7 @@ export class Order extends Model {
     @Column({type: DataType.STRING})declare userId: string;
 
     @HasMany(() => OrderItem)declare items: OrderItem[];
+
+    @Default('pending')
+    @Column({ type: DataType.STRING })declare status: string;
 }

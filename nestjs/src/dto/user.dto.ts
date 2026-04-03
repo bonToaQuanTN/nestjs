@@ -1,8 +1,6 @@
 import { IsEmail, IsString, IsNotEmpty, IsNumber,IsUUID, IsInt } from "class-validator";
 import { Transform } from "class-transformer";
 import { ApiProperty } from '@nestjs/swagger';
-import { diskStorage } from 'multer';
-import { AllowNull } from "sequelize-typescript";
 
 export class CreateUserDto{
 
@@ -61,7 +59,7 @@ export class CreateProductDto {
   @ApiProperty({ example: "cái" })
   unit!: string;
 
-  @ApiProperty({ example: 100000 })
+  @ApiProperty({ example: "USD" })
   price!: number;
 
   @ApiProperty({ example: "Việt Nam" })
@@ -91,4 +89,12 @@ export class CreateOrderItemDto {
   @IsInt()
   @ApiProperty({example:" so luong"})
   quantity!: number;
+}
+
+export class CreatePaymentDto {
+  @ApiProperty({example: "ma hoa don"})
+  id!: string;
+
+  @ApiProperty({example: 50})
+  price!: number;
 }

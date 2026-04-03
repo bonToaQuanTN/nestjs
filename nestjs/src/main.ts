@@ -1,10 +1,12 @@
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe} from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder} from '@nestjs/swagger'
 import * as dotenv from 'dotenv';
 import { WinstonModule } from 'nest-winston';
 import * as winston from 'winston';
+import * as bodyParser from 'body-parser';
+import * as express from 'express';
 
 async function bootstrap() {
 
@@ -50,9 +52,10 @@ async function bootstrap() {
 
 
   SwaggerModule.setup('api', app, document);
-  app.useGlobalPipes(new ValidationPipe({transform: true,}),
-  );
-  await app.listen(3000);
+  app.useGlobalPipes(new ValidationPipe({transform: true,}));
+  app.use('/payment/webhook', bodyParser.raw({ type: 'application/json' }));
+
+  await app.listen(4500);
   
 }
 bootstrap();

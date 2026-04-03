@@ -10,16 +10,18 @@ import { AppService } from './service/app.service';
 import { SequelizeModule } from "@nestjs/sequelize";
 import { Users } from './model/app.model';
 import { Role } from './model/app.modelRoles';
-import {Permission} from './model/app.permissions'
+import {Permission} from './model/app.permissions';
+import {PaymentController} from './controller/app.controllerPayment'
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { StringValue } from 'ms';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import {Product} from './model/app.modelProduct';
-import {ProductController} from './controller/app.controllerProduct'
-import {OrderItem} from './model/app.modelItem'
-import {Order} from './model/app.modelOrder'
+import {ProductController} from './controller/app.controllerProduct';
+import {OrderItem} from './model/app.modelItem';
+import {Order} from './model/app.modelOrder';
+import {StripeService} from './service/stripe.service'
 
 @Module({
   imports: [
@@ -65,10 +67,10 @@ import {Order} from './model/app.modelOrder'
 
     CacheModule.registerAsync({
       inject: [ConfigService],
-    useFactory: (config: ConfigService) => ({
-      store: redisStore,
-      host: config.get('REDIS_HOST'),
-      port: config.get('REDIS_PORT')
+      useFactory: (config: ConfigService) => ({
+        store: redisStore,
+        host: config.get('REDIS_HOST'),
+        port: config.get('REDIS_PORT')
       })
     })
   ],
@@ -79,8 +81,9 @@ import {Order} from './model/app.modelOrder'
     UploadController,
     ProductController,
     orderItemController,
-    orderController
+    orderController,
+    PaymentController
   ],
-  providers: [AppService,UploadService]
+  providers: [AppService,UploadService,StripeService]
 })
 export class AppModule {}

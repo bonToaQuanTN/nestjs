@@ -20,6 +20,7 @@ const mockPermissionModel = {};
 const mockProductModel = {};
 const mockOrderModel = {};
 const mockOrderItemModel = {};
+const mockCategory = {};
 
 jest.mock('cloudinary', () => ({
   v2: {
@@ -35,7 +36,8 @@ jest.mock('fs', () => ({
   unlinkSync: jest.fn(),
 }));
 
-describe('UploadService', () => {let service: UploadService;
+describe('UploadService', () => {
+  let service: UploadService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -65,45 +67,69 @@ describe('UploadService', () => {let service: UploadService;
     );
   });
 
-  it('should upload file and return url', async () => {
+  it('should upload file normally if size <= 100MB', async () => {
     const mockFile: any = {
       size: 1000,
-      originalname: 'test.jpg',
-      path: 'uploads/test.jpg',
+      originalname: 'test.mp4',
+      path: 'uploads/test.mp4',
     };
 
-    const mockUrl = 'http://cloudinary.com/test.jpg';
-    (cloudinary.uploader.upload_large as jest.Mock).mockImplementation(
-      (path, options, callback) => {
-        callback(null, { secure_url: mockUrl });
-      },
-    );
+    const mockUrl = 'http://cloudinary.com/test.mp4';
 
-    (fs.existsSync as jest.Mock).mockReturnValue(true);
+    jest
+      .spyOn(service, 'uploadToCloudinary')
+      .mockResolvedValue(mockUrl);
+
     const result = await service.uploadFile(mockFile);
-    expect(result).toBe(mockUrl);
-    expect(cloudinary.uploader.upload_large).toHaveBeenCalled();
-    expect(fs.unlinkSync).toHaveBeenCalledWith('uploads/test.jpg');
+
+    expect(result).toEqual([mockUrl]);
+    expect(service.uploadToCloudinary).toHaveBeenCalledWith(
+      'uploads/test.mp4',
+    );
   });
 
-  it('should reject when upload fails', async () => {
+  it('should split video when size > 100MB', async () => {
     const mockFile: any = {
-      size: 1000,
-      originalname: 'test.jpg',
-      path: 'uploads/test.jpg',
+      size: 200 * 1024 * 1024,
+      originalname: 'big.mp4',
+      path: 'uploads/big.mp4',
     };
 
-    (cloudinary.uploader.upload_large as jest.Mock).mockImplementation(
-      (path, options, callback) => {
-        callback(new Error('Upload failed'), null);
-      },
+    const parts = ['uploads/big_part_001.mp4', 'uploads/big_part_002.mp4'];
+
+    jest.spyOn(service, 'splitVideo').mockResolvedValue(parts);
+
+    jest
+      .spyOn(service, 'uploadToCloudinary')
+      .mockResolvedValue('http://cloudinary.com/part.mp4');
+
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    jest.spyOn(fs, 'unlinkSync').mockImplementation(() => undefined);
+
+    const result = await service.uploadFile(mockFile);
+
+    expect(service.splitVideo).toHaveBeenCalledWith('uploads/big.mp4');
+    expect(service.uploadToCloudinary).toHaveBeenCalledTimes(2);
+    expect(result).toEqual([
+      'http://cloudinary.com/part.mp4',
+      'http://cloudinary.com/part.mp4',
+    ]);
+  });
+
+  it('should reject when cloudinary upload fails', async () => {
+    const mockFile: any = {
+      size: 1000,
+      originalname: 'test.mp4',
+      path: 'uploads/test.mp4',
+    };
+
+    jest
+      .spyOn(service, 'uploadToCloudinary')
+      .mockRejectedValue(new Error('Upload failed'));
+
+    await expect(service.uploadFile(mockFile)).rejects.toThrow(
+      'Upload failed',
     );
-
-    (fs.existsSync as jest.Mock).mockReturnValue(true);
-
-    await expect(service.uploadFile(mockFile)).rejects.toThrow();
-
-    expect(fs.unlinkSync).toHaveBeenCalled();
   });
 });
 
@@ -125,7 +151,7 @@ describe('AppController', () => {
     login: jest.fn(),
   };
 
-  const mockCacheManager = {get: jest.fn(),set: jest.fn(),del: jest.fn()};
+  const mockCacheManager = {get: jest.fn(),set: jest.fn(),del: jest.fn(),clear: jest.fn()};
   const mockUserModel = {findAndCountAll: jest.fn(),findOne: jest.fn(),create: jest.fn(),findAll: jest.fn()};
   const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
   const mockRoleModel = {findAll: jest.fn()};
@@ -141,7 +167,8 @@ describe('AppController', () => {
       mockJwtService as any,
       mockLogger as any,
       mockOrderItemModel as any,
-      mockJwtService as any
+      mockJwtService as any,
+      mockCategory as any
     );
     (service as any).logger = mockLogger;
     });
@@ -632,7 +659,7 @@ describe('createProduct', () => {
   let service: AppService;
 
   const mockProductModel = {findOne: jest.fn(),create: jest.fn()};
-  const mockCacheManager = {del: jest.fn()};
+  const mockCacheManager = {get: jest.fn(),set: jest.fn(),del: jest.fn(),clear: jest.fn()};
   const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
   const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
 
@@ -645,7 +672,8 @@ describe('createProduct', () => {
       mockJwtService as any,
       mockLogger as any,
       mockOrderItemModel as any,
-      mockLogger as any
+      mockLogger as any,
+      mockCategory as any
     );
 
     (service as any).productModel = mockProductModel;

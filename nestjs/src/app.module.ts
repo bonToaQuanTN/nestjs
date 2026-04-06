@@ -1,27 +1,29 @@
-import { Controller, Module } from '@nestjs/common';
-import { AppController } from './controller/app.controller';
-import { RoleController }from './controller/app.controllerRole';
-import { permissionController } from './controller/app.controllerPermission';
-import { UploadController }from './controller/app.controllerUpload';
-import { UploadService } from './service/upload.service';
-import { orderController } from './controller/app.controllerOrder'
-import {  orderItemController } from './controller/app.controllerItem'
-import { AppService } from './service/app.service';
-import { SequelizeModule } from "@nestjs/sequelize";
-import { Users } from './model/app.model';
-import { Role } from './model/app.modelRoles';
+import {Controller, Module } from '@nestjs/common';
+import {AppController } from './controller/app.controller';
+import {RoleController }from './controller/app.controllerRole';
+import {permissionController } from './controller/app.controllerPermission';
+import {UploadController }from './controller/app.controllerUpload';
+import {UploadService } from './service/upload.service';
+import {orderController } from './controller/app.controllerOrder'
+import {orderItemController } from './controller/app.controllerItem'
+import {AppService } from './service/app.service';
+import {SequelizeModule } from "@nestjs/sequelize";
+import {Users } from './model/app.model';
+import {Role } from './model/app.modelRoles';
 import {Permission} from './model/app.permissions';
 import {PaymentController} from './controller/app.controllerPayment'
-import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { StringValue } from 'ms';
-import { CacheModule } from '@nestjs/cache-manager';
-import { redisStore } from 'cache-manager-redis-store';
+import {JwtModule } from '@nestjs/jwt';
+import {ConfigModule, ConfigService } from '@nestjs/config';
+import {StringValue } from 'ms';
+import {CacheModule } from '@nestjs/cache-manager';
+import {redisStore } from 'cache-manager-redis-store';
 import {Product} from './model/app.modelProduct';
 import {ProductController} from './controller/app.controllerProduct';
 import {OrderItem} from './model/app.modelItem';
 import {Order} from './model/app.modelOrder';
-import {StripeService} from './service/stripe.service'
+import {StripeService} from './service/stripe.service';
+import {Category} from './model/app.modelCategory';
+import {categoryController} from './controller/app.controllerCategory';
 
 @Module({
   imports: [
@@ -51,7 +53,8 @@ import {StripeService} from './service/stripe.service'
       Permission,
       Product,
       Order,
-      OrderItem
+      OrderItem,
+      Category
     ]),
     
     JwtModule.registerAsync({
@@ -82,7 +85,8 @@ import {StripeService} from './service/stripe.service'
     ProductController,
     orderItemController,
     orderController,
-    PaymentController
+    PaymentController,
+    categoryController
   ],
   providers: [AppService,UploadService,StripeService]
 })

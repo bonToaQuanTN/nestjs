@@ -1,5 +1,6 @@
-import {Table,Column,Model,DataType,PrimaryKey,Default} from 'sequelize-typescript';
+import {Table,Column,Model,DataType,PrimaryKey,Default,ForeignKey,BelongsTo} from 'sequelize-typescript';
 import { v4 as uuidv4 } from 'uuid';
+import {Category} from './app.modelCategory'
 
 @Table({
     tableName: 'Products',
@@ -20,5 +21,9 @@ export class Product extends Model<Product> {
     @Column({type: DataType.STRING})declare origin: string;
 
     @Column({type: DataType.TEXT})declare note: string;
+
+    @ForeignKey(() => Category)@Column({ type: DataType.INTEGER })declare categoryId: number;
+
+    @BelongsTo(() => Category)declare category: Category;
 
 }

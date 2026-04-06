@@ -24,32 +24,31 @@ export class PaymentController {
     async handleWebhook(@Req() req: Request) {
         const sig = req.headers['stripe-signature'];
         let event: Stripe.Event;
+
         try {
-            event = this.stripe.webhooks.constructEvent(
-                req.body,
-                sig as string,
-                process.env.STRIPE_WEBHOOK_SECRET!
-            );
-        this.logger.log(`Webhook received: ${event.type}`);
+            event = this.stripe.webhooks.constructEvent(req.body,sig as string,process.env.STRIPE_WEBHOOK_SECRET!);
+            this.logger.log(`Webhook received: ${event.type}`);
 
         } catch (error) {
-        this.logger.error(`Webhook signature verification failed`,);
-        return;
+            this.logger.error(`Webhook signature verification failed`);
+            return;
         }
 
         if (event.type === 'checkout.session.completed') {
             const session = event.data.object as Stripe.Checkout.Session;
+            this.logger.debug(`SessionId: ${session.id}`);
+            this.logger.debug(`Metadata: ${JSON.stringify(session.metadata)}`);
             const orderId = session.metadata?.orderId;
-            this.logger.log(`Payment success for orderId: ${orderId}`);
-            if (orderId) {
-                await this.orderService.updateStatus(orderId, 'PAID');
-                this.logger.log(`Order status updated to PAID: ${orderId}`);
-            } else {
-                this.logger.warn(`OrderId missing in session metadata`);
 
+            if (!orderId) {
+                this.logger.warn(`OrderId missing in metadata`);
+                return;
             }
-        }
 
+            this.logger.log(`Payment success for orderId: ${orderId}`);
+            await this.orderService.updateStatus(orderId, 'PAID');
+            this.logger.log(`Order status updated to PAID: ${orderId}`);
+        }
         return { received: true };
     }
 

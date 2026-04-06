@@ -37,10 +37,7 @@ export class ProductController {
     @Put(':code')
     @Permissions('PUT.PRODUCT')
     @ApiOperation({ summary: 'Update product' })
-    updateProduct(
-        @Param('code') code: string,
-        @Body() body: CreateProductDto
-    ){
+    updateProduct(@Param('code') code: string,@Body() body: CreateProductDto){
         return this.productService.updateProduct(code, body);
     }
 

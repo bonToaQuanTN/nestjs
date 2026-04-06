@@ -13,6 +13,7 @@ import {Product} from '../model/app.modelProduct';
 import {OrderItem} from '../model/app.modelItem';
 import {Order} from '../model/app.modelOrder';
 import { Sequelize } from 'sequelize';
+import {Category} from '../model/app.modelCategory'
 
 @Injectable()
 export class AppService {
@@ -26,6 +27,7 @@ export class AppService {
     @InjectModel(Product) private productModel: typeof Product,
     @InjectModel(Order) private orderModel: typeof Order,
     @InjectModel(OrderItem) private orderItemModel: typeof OrderItem,
+    @InjectModel(Category) private categoryModel: typeof Category,
 
 
     private readonly jwtService: JwtService
@@ -510,7 +512,7 @@ export class AppService {
   }
 
   async createProduct(data: CreateProductDto) {
-    const { name, unit, price, origin, note } = data;
+    const { name, unit, price, origin, note ,categoryId} = data;
     this.logger.log(`Create product attempt: ${name}`);
     try {
       const existProduct = await this.productModel.findOne({
@@ -520,7 +522,7 @@ export class AppService {
         this.logger.warn(`Create product failed - product exists: ${name}`);
         throw new ConflictException('Product already exists');
       }
-      const product = await this.productModel.create({name,unit,price,origin,note}as any);
+      const product = await this.productModel.create({name,unit,price,origin,note,categoryId}as any);
 
       await this.cacheManager.del(`product_${product.id}`);
       await this.cacheManager.del('products_all');
@@ -554,7 +556,7 @@ export class AppService {
       this.logger.warn(`CACHE MISS: ${cacheKey}`);
 
       const { rows, count } = await this.productModel.findAndCountAll({
-        attributes: ['code', 'name', 'unit', 'price', 'origin', 'note'],
+        attributes: ['code', 'name', 'unit', 'price', 'origin', 'note','categoryId'],
         limit,
         offset,
         order: [['createdAt', 'DESC']]
@@ -932,5 +934,108 @@ export class AppService {
     await order.update({ status });
     return order;
   }
+
+  async createCategory(name: string) {
+    this.logger.log(`Create category attempt: ${name}`);
+    try {
+      const existing = await this.categoryModel.findOne({ where: { name } });
+      if (existing) {
+        this.logger.warn(`Category already exists: ${name}`);
+        throw new BadRequestException('Category already exists');
+      }
+      const category = await this.categoryModel.create({ name });
+      await this.cacheManager.del('categories_all');
+      this.logger.log(`Category created successfully: ${name}`);
+
+      return category;
+    } catch (error) {
+      this.handleError(error, 'Get order by id error');
+      throw error;
+    }
+  }
+
+  async getCategories() {
+
+    this.logger.log('Get all categories');
+
+    try {
+
+      const cacheKey = 'categories_all';
+      const cached = await this.cacheManager.get(cacheKey);
+
+      if (cached) {
+        this.logger.log('CACHE HIT: categories_all');
+        return cached;
+      }
+
+      this.logger.warn('CACHE MISS: categories_all');
+      const categories = await this.categoryModel.findAll();
+      await this.cacheManager.set(cacheKey, categories, 60);
+      this.logger.log('Categories cached');
+      return categories;
+    } catch (error) {
+      this.handleError(error, 'Get order by id error');
+      throw error;
+    }
+  }
+
+  async updateCategory(id: number, name: string) {
+    this.logger.log(`Update category attempt: ${id}`);
+    try {
+      const category = await this.categoryModel.findByPk(id);
+      if (!category) {
+        this.logger.warn(`Category not found: ${id}`);
+        throw new NotFoundException('Category not found');
+      }
+      await category.update({ name });
+      await this.cacheManager.del(`category_${id}`);
+      await this.cacheManager.del('categories_all');
+      this.logger.log(`Category updated successfully: ${id}`);
+      return category;
+
+    } catch (error) {
+      this.handleError(error, 'Get by id error');
+      throw error;
+    }
+  }
+
+  async deleteCategory(id: number) {
+    this.logger.log(`Delete category attempt: ${id}`);
+    try {
+      const category = await this.categoryModel.findByPk(id);
+      if (!category) {
+        this.logger.warn(`Category not found: ${id}`);
+        throw new NotFoundException('Category not found');
+      }
+
+      await category.destroy();
+      await this.cacheManager.del(`category_${id}`);
+      await this.cacheManager.del('categories_all');
+      this.logger.log(`Category deleted successfully: ${id}`);
+
+      return {
+        message: 'Category deleted successfully'
+      };
+
+    } catch (error) {
+      this.handleError(error, 'Get by id error');
+      throw error;
+    }
+  }
+
+  async getProductsByCategory(categoryName: string) {
+    this.logger.log(`Get products by category: ${categoryName}`);
+    try {
+      const products = await this.productModel.findAll({
+        include: [{model: Category,where: { name: categoryName },attributes: ['id','name']}]
+      });
+      this.logger.log(`Products fetched: ${products.length}`);
+      return products;
+    } catch (error) {
+      this.handleError(error, 'Get products by category error');
+      throw error;
+    }
+  }
+  
 
 }

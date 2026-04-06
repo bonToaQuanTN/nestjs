@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Body, Req, Delete, Patch, Param, UseGuards,Query} from '@nestjs/common';
 import { AppService } from '../service/app.service';
 import { Permissions } from '../guards/roles.decorator';
-import { ApiTags, ApiBearerAuth,ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth,ApiOperation, ApiBody } from '@nestjs/swagger';
 import {PermissionGuard} from '../guards/PermissionGuard'
 import { CreateOrderDto } from "../dto/user.dto";
 import { AuthGuard } from '../guards/auth.guard';
@@ -26,8 +26,8 @@ export class orderController{
   @Permissions('GET.ORDER')
   @ApiOperation({ summary: 'Get orders' })
   getOrders(@Query('page') page: number) {
-  return this.orderService.getOrders(Number(page) || 1);
-}
+    return this.orderService.getOrders(Number(page) || 1);
+  }
 
   @Get(':id')
   @Permissions('GETID.ORDER')
@@ -39,8 +39,9 @@ export class orderController{
   @Put(':id')
   @Permissions('PUTID.ORDER')
   @ApiOperation({ summary: 'Update order' })
-  updateOrder(@Param('id') id: string,@Body('userId') userId: string) {
-    return this.orderService.updateOrder(id, userId);
+  @ApiBody({type: CreateOrderDto})
+  updateOrder(@Param('id') id: string,@Body() dto: CreateOrderDto) {
+    return this.orderService.updateOrder(id, dto.userId);
   }
 
   @Delete(':id')

@@ -67,6 +67,9 @@ export class CreateProductDto {
 
   @ApiProperty({ required: false })
   note!: string;
+
+  @ApiProperty({example:"1"})
+  categoryId!: number;
 }
 
 export class CreateOrderDto {
@@ -97,4 +100,10 @@ export class CreatePaymentDto {
 
   @ApiProperty({example: 50})
   price!: number;
+}
+
+export class createCategoryDto{
+  @ApiProperty({ example:"loai san pham"})
+  @IsNotEmpty()
+  name!: string;
 }

@@ -14,7 +14,7 @@ if (!fs.existsSync('./uploads')) {
 
 @UseGuards(AuthGuard, PermissionGuard)
 @ApiBearerAuth()
-@Controller('upload')
+@Controller('Upload')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
@@ -23,7 +23,7 @@ export class UploadController {
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
-      type: 'object',properties: {
+      type: 'object',properties:{
         file: { type: 'string', format: 'binary' }
       }
     }

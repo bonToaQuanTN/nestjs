@@ -8,7 +8,7 @@ import { Public } from '../guards/public.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody,ApiBearerAuth  } from '@nestjs/swagger';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 
-@Controller('order-items')
+@Controller('Order-items')
 @UseGuards(AuthGuard,PermissionGuard)
 @ApiBearerAuth()
 export class orderItemController {
@@ -16,19 +16,19 @@ export class orderItemController {
 
     @Post()
     @Permissions('POST.ITEM')
-    async create(@Body() body: CreateOrderItemDto) {
+    async create(@Body() body: CreateOrderItemDto){
         return this.orderItemService.createOrderItem(body);
     }
 
     @Get()
     @Permissions('GET.ITEM')
-    async findAll(@Query('page') page: number = 1) {
+    async findAll(@Query('page') page: number = 1){
         return this.orderItemService.getAllOrderItem(page);
     }
 
     @Get(':orderId')
     @Permissions('GETID.ITEM')
-    async findByOrder(@Param('orderId') orderId: string) {
+    async findByOrder(@Param('orderId') orderId: string){
         return this.orderItemService.findByOrder(orderId);
     }   
 
@@ -40,7 +40,7 @@ export class orderItemController {
 
     @Delete(':id')
     @Permissions('DELETE.ITEM')
-    deleteOrderItem(@Param('id') id: string) {
+    deleteOrderItem(@Param('id') id: string){
         return this.orderItemService.deleteOrderItem(id);
     }
 }

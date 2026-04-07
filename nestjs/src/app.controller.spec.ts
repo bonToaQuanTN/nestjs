@@ -1035,3 +1035,112 @@ describe('UploadController', () => {
     );
   });
 });
+
+describe('PermissionGuard', () => {
+  let guard: PermissionGuard;
+  let reflector: Reflector;
+
+  const mockReflector = {
+    get: jest.fn(),
+  };
+
+  const createMockExecutionContext = (user: any): ExecutionContext =>
+    ({
+      switchToHttp: () => ({
+        getRequest: () => ({
+          user,
+        }),
+      }),
+      getHandler: jest.fn(),
+    } as any);
+
+  beforeEach(() => {
+    reflector = mockReflector as any;
+    guard = new PermissionGuard(reflector);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should allow access when no permissions required', () => {
+    mockReflector.get.mockReturnValue(undefined);
+
+    const context = createMockExecutionContext({
+      role: 'user',
+      permissions: [],
+    });
+
+    const result = guard.canActivate(context);
+
+    expect(result).toBe(true);
+  });
+
+  it('should allow admin access regardless of permissions', () => {
+    mockReflector.get.mockReturnValue(['CREATE.USER']);
+
+    const context = createMockExecutionContext({
+      role: 'admin',
+      permissions: [],
+    });
+
+    const result = guard.canActivate(context);
+
+    expect(result).toBe(true);
+  });
+
+  it('should allow access when user has required permission', () => {
+    mockReflector.get.mockReturnValue(['CREATE.USER']);
+
+    const context = createMockExecutionContext({
+      role: 'user',
+      permissions: ['CREATE.USER', 'DELETE.USER'],
+    });
+
+    const result = guard.canActivate(context);
+
+    expect(result).toBe(true);
+  });
+
+  it('should allow access when user has one of multiple permissions', () => {
+    mockReflector.get.mockReturnValue([
+      'CREATE.USER',
+      'UPDATE.USER',
+    ]);
+
+    const context = createMockExecutionContext({
+      role: 'user',
+      permissions: ['UPDATE.USER'],
+    });
+
+    const result = guard.canActivate(context);
+
+    expect(result).toBe(true);
+  });
+
+  it('should throw ForbiddenException when user lacks permission', () => {
+    mockReflector.get.mockReturnValue(['DELETE.USER']);
+
+    const context = createMockExecutionContext({
+      role: 'user',
+      permissions: ['CREATE.USER'],
+    });
+
+    expect(() => guard.canActivate(context)).toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('should throw ForbiddenException when user has no permissions', () => {
+    mockReflector.get.mockReturnValue(['DELETE.USER']);
+
+    const context = createMockExecutionContext({
+      role: 'user',
+      permissions: [],
+    });
+
+    expect(() => guard.canActivate(context)).toThrow(
+      'Permission denied',
+    );
+  });
+});

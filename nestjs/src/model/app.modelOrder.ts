@@ -1,6 +1,7 @@
-import {Table, Column, Model, DataType, PrimaryKey,Default,HasMany } from "sequelize-typescript";
+import {Table, Column, Model, DataType, PrimaryKey,Default,HasMany,BelongsTo,ForeignKey } from "sequelize-typescript";
 import { v4 as uuidv4 } from 'uuid';
 import { OrderItem } from "./app.modelItem";
+import {Discount} from "./app.modelDiscount"
 
 @Table({
     tableName: 'Orders',
@@ -19,4 +20,14 @@ export class Order extends Model {
 
     @Default('pending')
     @Column({ type: DataType.STRING })declare status: string;
+
+    @ForeignKey(() => Discount)
+    @Column({
+    type: DataType.STRING,
+    allowNull: true
+    })
+    discountId!: string;
+
+    @BelongsTo(() => Discount)
+    discount!: Discount;
 }

@@ -20,10 +20,12 @@ import {redisStore } from 'cache-manager-redis-store';
 import {Product} from './model/app.modelProduct';
 import {ProductController} from './controller/app.controllerProduct';
 import {OrderItem} from './model/app.modelItem';
+import {Discount} from './model/app.modelDiscount';
 import {Order} from './model/app.modelOrder';
 import {StripeService} from './service/stripe.service';
 import {Category} from './model/app.modelCategory';
 import {categoryController} from './controller/app.controllerCategory';
+import {DiscountController} from './controller/app.controllerDiscount';
 
 @Module({
   imports: [
@@ -54,7 +56,8 @@ import {categoryController} from './controller/app.controllerCategory';
       Product,
       Order,
       OrderItem,
-      Category
+      Category,
+      Discount
     ]),
     
     JwtModule.registerAsync({
@@ -86,7 +89,8 @@ import {categoryController} from './controller/app.controllerCategory';
     orderItemController,
     orderController,
     PaymentController,
-    categoryController
+    categoryController,
+    DiscountController
   ],
   providers: [AppService,UploadService,StripeService]
 })

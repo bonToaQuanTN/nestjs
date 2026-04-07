@@ -1,6 +1,7 @@
-import { IsEmail, IsString, IsNotEmpty, IsNumber,IsUUID, IsInt } from "class-validator";
+import { IsEmail, IsString, IsNotEmpty, IsNumber,IsUUID, IsInt,IsOptional } from "class-validator";
 import { Transform } from "class-transformer";
 import { ApiProperty } from '@nestjs/swagger';
+import { AllowNull } from "sequelize-typescript";
 
 export class CreateUserDto{
 
@@ -77,6 +78,10 @@ export class CreateOrderDto {
   @IsNotEmpty()
   @ApiProperty({example:"ma nguoi dung"})
   userId!: string;
+
+  @IsString()
+  @ApiProperty({example:"ma giam gia"})
+  discountId!: string;
 }
 
 export class CreateOrderItemDto {
@@ -106,4 +111,17 @@ export class createCategoryDto{
   @ApiProperty({ example:"loai san pham"})
   @IsNotEmpty()
   name!: string;
+}
+
+export class CreateDiscountDto {
+
+  @IsString()
+  @ApiProperty({ example: 'SALE10' })
+  id!: string;
+
+  @IsNumber()
+  @IsOptional()
+  @ApiProperty({ example: 10,required: false })
+  discountRate!: number;
+
 }

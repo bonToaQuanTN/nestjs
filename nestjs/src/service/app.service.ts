@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, NotFoundException, ForbiddenException , UnauthorizedException, BadRequestException, Inject, Logger } from '@nestjs/common';
 import {Users} from "../model/app.model";
 import {Role} from "../model/app.modelRoles";
-import {createRoleDto, CreateUserDto, LoginDto,PermissionDto, CreateProductDto, CreateOrderDto,CreateOrderItemDto} from "../dto/user.dto";
+import {createRoleDto, CreateDiscountDto, CreateUserDto, LoginDto,PermissionDto, CreateProductDto, CreateOrderDto,CreateOrderItemDto} from "../dto/user.dto";
 import { InjectModel} from "@nestjs/sequelize";
 import * as bcrypt from "bcrypt";
 import { JwtService } from '@nestjs/jwt';
@@ -13,7 +13,8 @@ import {Product} from '../model/app.modelProduct';
 import {OrderItem} from '../model/app.modelItem';
 import {Order} from '../model/app.modelOrder';
 import { Sequelize } from 'sequelize';
-import {Category} from '../model/app.modelCategory'
+import {Category} from '../model/app.modelCategory';
+import {Discount} from '../model/app.modelDiscount';
 
 @Injectable()
 export class AppService {
@@ -28,6 +29,7 @@ export class AppService {
     @InjectModel(Order) private orderModel: typeof Order,
     @InjectModel(OrderItem) private orderItemModel: typeof OrderItem,
     @InjectModel(Category) private categoryModel: typeof Category,
+    @InjectModel(Discount) private discountModel: typeof Discount,
 
 
     private readonly jwtService: JwtService
@@ -693,19 +695,19 @@ export class AppService {
   }
   }
 
- async createOrder(userId: string) {
-  this.logger.log(`Create order attempt for user: ${userId}`);
+  async createOrder(userId: string,discountId?: string) {
+    this.logger.log(`Create order attempt for user: ${userId}`);
 
-  try {
-    const order = await this.orderModel.create({userId});
-    this.logger.log(`Order created successfully: ${order.id}`);
-    await this.cacheManager.clear();
-    return order;
+    try {
+      const order = await this.orderModel.create({userId,discountId: discountId || null});
+      this.logger.log(`Order created successfully: ${order.id}`);
+      await this.cacheManager.clear();
+      return order;
 
-  }catch (error) {
-    this.handleError(error, 'Create order error');
-    throw error;
-  }
+    }catch (error) {
+      this.handleError(error, 'Create order error');
+      throw error;
+    }
   }
 
   async createOrderItem(data: CreateOrderItemDto) {
@@ -776,14 +778,18 @@ export class AppService {
 
     try {
       const item = await this.orderItemModel.findByPk(id);
+
       if (!item) {
         this.logger.warn(`Update failed - order item not found: ${id}`);
         throw new NotFoundException('Order item not found');
       }
-      const product = await this.productModel.findOne({where: { code: productId }});
+
+      const product = await this.productModel.findOne({
+        where: { code: productId }
+      });
 
       if (!product) {
-        this.logger.warn(`Update failed - product not found: ${productId}`);
+        this.logger.warn(`Product not found: ${productId}`);
         throw new NotFoundException('Product not found');
       }
 
@@ -793,9 +799,7 @@ export class AppService {
       await item.update({productId,quantity,price,total});
       await this.cacheManager.clear();
       this.logger.log(`Order item updated successfully: ${id}`);
-
       return item;
-
     } catch (error) {
       this.handleError(error, 'Update order item error');
       throw error;
@@ -829,20 +833,25 @@ export class AppService {
       const offset = (page - 1) * limit;
 
       const { rows, count } = await this.orderModel.findAndCountAll({
-        include: [{ model: OrderItem }],
+        include: [
+          { model: OrderItem },
+          { model: Discount, attributes: ['id', 'discountRate'], required: false }
+        ],
         limit,
         offset,
         order: [['createdAt', 'DESC']]
       });
 
       const orders = rows.map(order => {
-
-        const totalAmount = order.items.reduce((sum, item) => sum + item.total,0);
+        const subtotal = order.items.reduce((sum, item) => sum + item.total,0);
+        const discountRate = Number(order.discount?.discountRate || 0);
+        const finalAmount =subtotal - (subtotal * discountRate) / 100;
         return {
           ...order.toJSON(),
-          totalAmount
+          subtotal,
+          discountRate,
+          finalAmount
         };
-
       });
 
       this.logger.log(`Orders fetched successfully: ${orders.length}`);
@@ -854,13 +863,13 @@ export class AppService {
         data: orders
       };
 
-      }catch (error) {
-        this.handleError(error, 'Get orders error');
-        throw error;
-      }
+    } catch (error) {
+      this.handleError(error, 'Get orders error');
+      throw error;
+    }
   }
 
-  async updateOrder(id: string, userId: string) {
+  async updateOrder(id: string, userId: string,discountId?: string) {
     this.logger.log(`Update order attempt: ${id}`);
     try {
       const order = await this.orderModel.findByPk(id);
@@ -868,13 +877,11 @@ export class AppService {
         this.logger.warn(`Update failed - order not found: ${id}`);
         throw new NotFoundException('Order not found');
       }
-
-      await order.update({ userId });
+      await order.update({userId,discountId: discountId || null});
       this.logger.log(`Order updated successfully: ${id}`);
       await this.cacheManager.clear();
       return order;
-
-    }catch (error) {
+    } catch (error) {
       this.handleError(error, 'Update order error');
       throw error;
     }
@@ -900,12 +907,19 @@ export class AppService {
 
   async getOrderById(id: string) {
     this.logger.log(`Get order by id: ${id}`);
+
     try {
+
       const order = await this.orderModel.findByPk(id, {
         include: [
           {
             model: OrderItem,
             attributes: ['productId', 'quantity', 'price', 'total']
+          },
+          {
+            model: Discount,
+            attributes: ['id', 'discountRate'],
+            required: false
           }
         ]
       });
@@ -915,9 +929,19 @@ export class AppService {
         throw new NotFoundException('Order not found');
       }
 
-      const orderTotal = order.items?.reduce((sum, item) => sum + item.total,0);
-      const result = {...order.toJSON(),orderTotal};
+      const subtotal = (order.items || []).reduce((sum, item) => sum + item.total,0);
+      const discountRate = order.discount?.discountRate || 0;
+      const finalAmount =subtotal - (subtotal * discountRate) / 100;
+
+      const result = {
+        ...order.toJSON(),
+        subtotal,
+        discountRate,
+        finalAmount
+      };
+
       this.logger.log(`Order fetched successfully: ${id}`);
+
       return result;
 
     } catch (error) {
@@ -1037,5 +1061,61 @@ export class AppService {
     }
   }
   
+  async getDiscounts(page: number = 1) {
+    this.logger.log(`Get discounts page: ${page}`);
+    try {
+      const limit = 5;
+      const offset = (page - 1) * limit;
+      const { rows, count } = await this.discountModel.findAndCountAll({
+        limit,
+        offset,
+        order: [['createdAt', 'DESC']]
+      });
+      return {
+        page,
+        limit,
+        totalDiscounts: count,
+        totalPages: Math.ceil(count / limit),
+        data: rows
+      };
+
+    } catch (error) {
+      this.handleError(error, 'Get discounts error');
+      throw error;
+    }
+
+}
+
+  async createDiscount(data: CreateDiscountDto) {
+    const { id , discountRate } = data;
+    this.logger.log(`Create discount: ${data.id}`);
+    const discount = await this.discountModel.create(data as any);
+    await this.cacheManager.del('discounts');
+    return discount;
+  }
+
+  async updateDiscount(id: string, rate: number) {
+    this.logger.log(`Update discount: ${id}`);
+    const discount = await this.discountModel.findByPk(id);
+    if (!discount) {
+      throw new NotFoundException('Discount not found');
+    }
+    await discount.update({ discountRate: rate });
+    await this.cacheManager.del('discounts');
+    return discount;
+  }
+
+  async deleteDiscount(id: string) {
+    this.logger.log(`Delete discount: ${id}`);
+    const discount = await this.discountModel.findByPk(id);
+    if (!discount) {
+      throw new NotFoundException('Discount not found');
+    }
+    await discount.destroy();
+    await this.cacheManager.del('discounts');
+    return {
+      message: 'Discount deleted successfully'
+    };
+  }
 
 }

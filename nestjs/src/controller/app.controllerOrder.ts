@@ -18,8 +18,8 @@ export class orderController{
   @Post()
   @Permissions('POST.ORDER')
   @ApiOperation({ summary: 'Create order' })
-  createOrder(@Body('') body: CreateOrderDto) {
-    return this.orderService.createOrder(body.userId);
+  createOrder(@Body() body: CreateOrderDto) {
+    return this.orderService.createOrder(body.userId,body.discountId);
   }
 
   @Get()
@@ -41,7 +41,7 @@ export class orderController{
   @ApiOperation({ summary: 'Update order' })
   @ApiBody({type: CreateOrderDto})
   updateOrder(@Param('id') id: string,@Body() dto: CreateOrderDto) {
-    return this.orderService.updateOrder(id, dto.userId);
+    return this.orderService.updateOrder(id, dto.userId,dto.discountId);
   }
 
   @Delete(':id')

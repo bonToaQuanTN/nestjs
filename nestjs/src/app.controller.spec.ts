@@ -13,6 +13,10 @@ import * as bcrypt from "bcrypt";
 import { Reflector } from '@nestjs/core';
 import { Op } from 'sequelize';
 import * as fs from 'fs';
+import {PaymentController} from './controller/app.controllerPayment';
+import { StripeService } from './service/stripe.service';
+import {UploadController} from './controller/app.controllerUpload';
+import {PermissionGuard} from './guards/PermissionGuard';
 
 const mockUserModel = {};
 const mockRoleModel = {};
@@ -20,7 +24,10 @@ const mockPermissionModel = {};
 const mockProductModel = {};
 const mockOrderModel = {};
 const mockOrderItemModel = {};
-const mockCategory = {};
+const mockCategoryModel = {};
+
+process.env.STRIPE_SECRET_KEY = 'sk_test_mock';
+process.env.STRIPE_WEBHOOK_SECRET = 'whsec_mock';
 
 jest.mock('cloudinary', () => ({
   v2: {
@@ -33,7 +40,10 @@ jest.mock('cloudinary', () => ({
 
 jest.mock('fs', () => ({
   existsSync: jest.fn(),
+  mkdirSync: jest.fn(),
   unlinkSync: jest.fn(),
+  createReadStream: jest.fn(),
+  createWriteStream: jest.fn(),
 }));
 
 describe('UploadService', () => {
@@ -157,6 +167,8 @@ describe('AppController', () => {
   const mockRoleModel = {findAll: jest.fn()};
   const mockPermissionModel = {findAll: jest.fn()};
   const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
+  const mockProductModel = {findAll: jest.fn()};
+
 
   beforeEach(() => {
     service = new AppService(
@@ -167,10 +179,11 @@ describe('AppController', () => {
       mockJwtService as any,
       mockLogger as any,
       mockOrderItemModel as any,
-      mockJwtService as any,
-      mockCategory as any
+      mockProductModel as any,
+      mockCategoryModel as any,
     );
     (service as any).logger = mockLogger;
+    (service as any).productModel = mockProductModel;
     });
 
   beforeEach(async () => {
@@ -182,27 +195,16 @@ describe('AppController', () => {
               useValue: mockService,
             },
           ],
-        })
-          .overrideGuard(AuthGuard)
-          .useValue({
-            canActivate: jest.fn(() => true),
-          })
-          .overrideGuard(RolesGuard)
-          .useValue({
-            canActivate: jest.fn(() => true),
-          })
-          .overrideInterceptor(CacheInterceptor)
-          .useValue({
-            intercept: jest.fn((context, next) => next.handle()),
-          })
-          .compile();
+        }).overrideGuard(AuthGuard).useValue({
+            canActivate: jest.fn(() => true)
+          }).overrideGuard(RolesGuard).useValue({
+            canActivate: jest.fn(() => true)
+          }).overrideInterceptor(CacheInterceptor).useValue({
+            intercept: jest.fn((context, next) => next.handle())
+          }).compile();
 
         appController = module.get<AppController>(AppController);
         appService = module.get<AppService>(AppService);
-  });
-
-  afterEach(() => {
-    jest.clearAllMocks();
   });
 
   describe('getAll', () => {
@@ -514,7 +516,50 @@ describe('AppController', () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-  }); 
+  });
+
+  describe('getProductsByCategory', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+    it('should return products by category', async () => {
+
+      const mockProducts = [
+        { id: 1, name: 'Laptop', Category: { id: 1, name: 'Electronics' } },
+        { id: 2, name: 'Phone', Category: { id: 1, name: 'Electronics' } }
+      ];
+
+      mockProductModel.findAll.mockResolvedValue(mockProducts);
+
+      const result = await service.getProductsByCategory('Electronics');
+
+      expect(mockProductModel.findAll).toHaveBeenCalledWith({
+        include: [
+          expect.objectContaining({
+            where: { name: 'Electronics' },
+            attributes: ['id', 'name'],
+          })
+        ],
+      });
+      expect(result).toEqual(mockProducts);
+    });
+
+    it('should return empty array if no products found', async () => {
+      mockProductModel.findAll.mockResolvedValue([]);
+      const result = await service.getProductsByCategory('Unknown');
+      expect(result).toEqual([]);
+      expect(mockProductModel.findAll).toHaveBeenCalled();
+    });
+
+    it('should handle error when database fails', async () => {
+      const error = new Error('Database error');
+      mockProductModel.findAll.mockRejectedValue(error);
+      const handleErrorSpy = jest.spyOn(service as any, 'handleError').mockImplementation(() => {});
+
+      await expect(service.getProductsByCategory('Electronics')).rejects.toThrow('Database error');
+      expect(handleErrorSpy).toHaveBeenCalledWith(error,'Get products by category error');
+    });
+  });
 });
 
 describe('AuthGuard', () => {
@@ -673,7 +718,7 @@ describe('createProduct', () => {
       mockLogger as any,
       mockOrderItemModel as any,
       mockLogger as any,
-      mockCategory as any
+      mockCategoryModel as any
     );
 
     (service as any).productModel = mockProductModel;
@@ -742,3 +787,251 @@ describe('createProduct', () => {
   });
 });
 
+describe('PaymentController', () => {
+  let controller: PaymentController;
+
+  const mockStripeService = {
+    createCheckoutSession: jest.fn(),
+  };
+
+  const mockOrderService = {
+    updateStatus: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [PaymentController],
+      providers: [{
+        provide: StripeService,
+        useValue: mockStripeService
+      },{
+        provide: AppService,
+        useValue: mockOrderService
+      }]
+    }).compile();
+    controller = module.get<PaymentController>(PaymentController);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should create checkout session', async () => {
+    const session = { url: 'http://stripe-session-url' };
+    mockStripeService.createCheckoutSession.mockResolvedValue(session);
+    const result = await controller.checkout({id: 'order123',price: 10} as any);
+    expect(mockStripeService.createCheckoutSession).toHaveBeenCalledWith('order123',10);
+
+    expect(result).toEqual({ url: session.url });
+  });
+
+  it('should return payment success', () => {
+    const result = controller.success();
+    expect(result).toEqual({message: 'Payment Success'});
+  });
+
+  it('should return payment cancel', () => {
+    const result = controller.cancel();
+    expect(result).toEqual({message: 'Payment Cancelled'});
+  });
+
+  it('should handle successful payment webhook', async () => {
+    const event = {
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'session123',
+          metadata: { orderId: 'order123' },
+        }
+      }
+    };
+
+    const req: any = {
+      headers: { 'stripe-signature': 'test-signature' },
+      body: {},
+    };
+    const stripe = (controller as any).stripe;
+    jest.spyOn(stripe.webhooks, 'constructEvent').mockReturnValue(event as any);
+    const result = await controller.handleWebhook(req);
+    expect(mockOrderService.updateStatus).toHaveBeenCalledWith(
+      'order123',
+      'PAID');
+
+    expect(result).toEqual({ received: true });
+  });
+
+  it('should fail webhook if signature invalid', async () => {
+    const req: any = {
+      headers: { 'stripe-signature': 'bad' },
+      body: {}
+    };
+
+    const stripe = (controller as any).stripe;
+
+    jest.spyOn(stripe.webhooks, 'constructEvent').mockImplementation(() => {
+        throw new Error('Invalid signature');
+      });
+
+    const result = await controller.handleWebhook(req);
+
+    expect(result).toBeUndefined();
+  });
+
+  it('should ignore webhook when orderId missing', async () => {
+    const event = {
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'session123',
+          metadata: {}
+        }
+      }
+    };
+
+    const req: any = {
+      headers: { 'stripe-signature': 'sig' },
+      body: {}
+    };
+    const stripe = (controller as any).stripe;
+    jest.spyOn(stripe.webhooks, 'constructEvent').mockReturnValue(event as any);
+    const result = await controller.handleWebhook(req);
+
+    expect(mockOrderService.updateStatus).not.toHaveBeenCalled();
+    expect(result).toBeUndefined();
+  });
+});
+
+describe('StripeService', () => {
+  let service: StripeService;
+
+  beforeEach(() => {
+    process.env.STRIPE_SECRET_KEY = 'test_key';
+
+    service = new StripeService();
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should create checkout session successfully', async () => {
+    const mockSession = {
+      id: 'session123',
+      url: 'http://stripe-session-url',
+    };
+
+    const stripe = (service as any).stripe;
+
+    jest
+      .spyOn(stripe.checkout.sessions, 'create')
+      .mockResolvedValue(mockSession as any);
+
+    const result = await service.createCheckoutSession('order123', 10);
+
+    expect(stripe.checkout.sessions.create).toHaveBeenCalled();
+
+    expect(result).toEqual(mockSession);
+  });
+
+  it('should throw error when stripe fails', async () => {
+    const stripe = (service as any).stripe;
+
+    jest
+      .spyOn(stripe.checkout.sessions, 'create')
+      .mockRejectedValue(new Error('Stripe error'));
+
+    await expect(
+      service.createCheckoutSession('order123', 10),
+    ).rejects.toThrow('Stripe error');
+  });
+
+  it('should throw error when STRIPE_SECRET_KEY missing', () => {
+    delete process.env.STRIPE_SECRET_KEY;
+
+    expect(() => new StripeService()).toThrow(
+      'STRIPE_SECRET_KEY is not defined',
+    );
+  });
+});
+
+describe('UploadController', () => {
+  let controller: UploadController;
+  let uploadService: UploadService;
+
+  const mockUploadService = {
+    uploadFile: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [UploadController],
+      providers: [
+        {
+          provide: UploadService,
+          useValue: mockUploadService,
+        },
+      ],
+    })
+      // bypass AuthGuard
+      .overrideGuard(AuthGuard)
+      .useValue({
+        canActivate: jest.fn(() => true),
+      })
+
+      // bypass PermissionGuard
+      .overrideGuard(PermissionGuard)
+      .useValue({
+        canActivate: jest.fn(() => true),
+      })
+
+      .compile();
+
+    controller = module.get<UploadController>(UploadController);
+    uploadService = module.get<UploadService>(UploadService);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('should upload file successfully', async () => {
+    const mockFile = {
+      originalname: 'video.mp4',
+      filename: '123-video.mp4',
+      path: './uploads/123-video.mp4',
+      size: 1000,
+    } as Express.Multer.File;
+
+    const mockUrls = {
+      url: 'http://localhost/uploads/123-video.mp4',
+    };
+
+    mockUploadService.uploadFile.mockResolvedValue(mockUrls);
+
+    const result = await controller.upload(mockFile);
+
+    expect(uploadService.uploadFile).toHaveBeenCalledWith(mockFile);
+
+    expect(result).toEqual({
+      message: 'Upload success',
+      urls: mockUrls,
+    });
+  });
+
+  it('should throw error if upload service fails', async () => {
+    const mockFile = {
+      originalname: 'video.mp4',
+      filename: '123-video.mp4',
+      path: './uploads/123-video.mp4',
+      size: 1000,
+    } as Express.Multer.File;
+
+    mockUploadService.uploadFile.mockRejectedValue(
+      new Error('Upload failed'),
+    );
+
+    await expect(controller.upload(mockFile)).rejects.toThrow(
+      'Upload failed',
+    );
+  });
+});

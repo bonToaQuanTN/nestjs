@@ -122,6 +122,6 @@ export class CreateDiscountDto {
   @IsNumber()
   @IsOptional()
   @ApiProperty({ example: 10,required: false })
-  discountRate!: number;
+  declare discountRate: number;
 
 }

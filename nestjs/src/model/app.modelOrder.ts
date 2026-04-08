@@ -12,22 +12,17 @@ export class Order extends Model {
 
     @PrimaryKey
     @Default(uuidv4)
-    @Column ({type: DataType.UUID})declare id: string;
+    @Column ({type: DataType.UUID}) declare id: string;
 
-    @Column({type: DataType.STRING})declare userId: string;
+    @Column({type: DataType.STRING}) declare userId: string;
 
-    @HasMany(() => OrderItem)declare items: OrderItem[];
+    @HasMany(() => OrderItem) declare items: OrderItem[];
 
     @Default('pending')
-    @Column({ type: DataType.STRING })declare status: string;
+    @Column({ type: DataType.STRING }) declare status: string;
 
     @ForeignKey(() => Discount)
-    @Column({
-    type: DataType.STRING,
-    allowNull: true
-    })
-    discountId!: string;
+    @Column({type: DataType.STRING,allowNull: true}) declare discountId: string;
 
-    @BelongsTo(() => Discount)
-    discount!: Discount;
+    @BelongsTo(() => Discount) declare discount: Discount;
 }

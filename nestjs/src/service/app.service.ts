@@ -835,7 +835,12 @@ export class AppService {
       const { rows, count } = await this.orderModel.findAndCountAll({
         include: [
           { model: OrderItem },
-          { model: Discount, attributes: ['id', 'discountRate'], required: false }
+          {
+            model: Discount,
+            as: 'discount',   // QUAN TRỌNG
+            attributes: ['id', 'discountRate'],
+            required: false
+          }
         ],
         limit,
         offset,
@@ -843,9 +848,9 @@ export class AppService {
       });
 
       const orders = rows.map(order => {
-        const subtotal = order.items.reduce((sum, item) => sum + item.total,0);
+        const subtotal = order.items.reduce((sum, item) => sum + item.total, 0);
         const discountRate = Number(order.discount?.discountRate || 0);
-        const finalAmount =subtotal - (subtotal * discountRate) / 100;
+        const finalAmount = subtotal - (subtotal * discountRate) / 100;
         return {
           ...order.toJSON(),
           subtotal,

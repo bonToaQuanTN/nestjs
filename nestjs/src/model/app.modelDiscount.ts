@@ -13,7 +13,7 @@ export class Discount extends Model {
     declare id: string;
 
     @Column(DataType.FLOAT)
-    discountRate!: number;
+    declare discountRate: number;
 
     @HasMany(() => Order)
     declare orders: Order[];

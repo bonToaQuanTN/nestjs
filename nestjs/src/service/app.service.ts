@@ -907,9 +907,7 @@ export class AppService {
 
   async getOrderById(id: string) {
     this.logger.log(`Get order by id: ${id}`);
-
     try {
-
       const order = await this.orderModel.findByPk(id, {
         include: [
           {

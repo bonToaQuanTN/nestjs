@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Body, Req, Delete, Param, UseGuards, Query,
 import { AppService } from '../service/app.service';
 import { CreateUserDto, LoginDto} from "../dto/user.dto";
 import { AuthGuard } from '../guards/auth.guard';
-import {PermissionGuard} from '../guards/PermissionGuard'
+import {PermissionGuard} from '../guards/PermissionGuard';
 import { Permissions } from '../guards/roles.decorator';
 import { Public } from '../guards/public.decorator';
 import { ApiTags, ApiOperation, ApiResponse, ApiBody,ApiBearerAuth  } from '@nestjs/swagger';

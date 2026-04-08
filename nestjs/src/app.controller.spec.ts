@@ -17,14 +17,19 @@ import {PaymentController} from './controller/app.controllerPayment';
 import { StripeService } from './service/stripe.service';
 import {UploadController} from './controller/app.controllerUpload';
 import {PermissionGuard} from './guards/PermissionGuard';
+import { Role } from './model/app.modelRoles';
 
-const mockUserModel = {};
-const mockRoleModel = {};
-const mockPermissionModel = {};
-const mockProductModel = {};
+const mockUserModel = {findAndCountAll: jest.fn(),findOne: jest.fn(),create: jest.fn(),findAll: jest.fn()};
+const mockRoleModel = {findAll: jest.fn()};
+const mockPermissionModel = {findAll: jest.fn(),findByPk: jest.fn()};
+const mockProductModel = {findAll: jest.fn()};
 const mockOrderModel = {};
 const mockOrderItemModel = {};
 const mockCategoryModel = {};
+const mockDiscountModel ={};
+const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
+const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
+const mockCacheManager = {get: jest.fn(),set: jest.fn(),del: jest.fn(),clear: jest.fn()};
 
 process.env.STRIPE_SECRET_KEY = 'sk_test_mock';
 process.env.STRIPE_WEBHOOK_SECRET = 'whsec_mock';
@@ -156,18 +161,11 @@ describe('AppController', () => {
     getUser: jest.fn(),
     createUser: jest.fn(),
     getByUserId: jest.fn(),
+    searchUserByName: jest.fn(),
     updateUser: jest.fn(),
     deleteUser: jest.fn(),
     login: jest.fn(),
   };
-
-  const mockCacheManager = {get: jest.fn(),set: jest.fn(),del: jest.fn(),clear: jest.fn()};
-  const mockUserModel = {findAndCountAll: jest.fn(),findOne: jest.fn(),create: jest.fn(),findAll: jest.fn()};
-  const mockLogger = {log: jest.fn(),warn: jest.fn(),error: jest.fn()};
-  const mockRoleModel = {findAll: jest.fn()};
-  const mockPermissionModel = {findAll: jest.fn()};
-  const mockJwtService = {sign: jest.fn(),verify: jest.fn()};
-  const mockProductModel = {findAll: jest.fn()};
 
 
   beforeEach(() => {
@@ -181,6 +179,7 @@ describe('AppController', () => {
       mockOrderItemModel as any,
       mockProductModel as any,
       mockCategoryModel as any,
+      mockDiscountModel as any,
     );
     (service as any).logger = mockLogger;
     (service as any).productModel = mockProductModel;
@@ -189,13 +188,10 @@ describe('AppController', () => {
   beforeEach(async () => {
       const module: TestingModule = await Test.createTestingModule({
           controllers: [AppController],
-          providers: [
-            {
-              provide: AppService,
-              useValue: mockService,
-            },
-          ],
-        }).overrideGuard(AuthGuard).useValue({
+          providers: [{
+            provide: AppService,
+            useValue: mockService,
+          }]}).overrideGuard(AuthGuard).useValue({
             canActivate: jest.fn(() => true)
           }).overrideGuard(RolesGuard).useValue({
             canActivate: jest.fn(() => true)
@@ -534,12 +530,7 @@ describe('AppController', () => {
       const result = await service.getProductsByCategory('Electronics');
 
       expect(mockProductModel.findAll).toHaveBeenCalledWith({
-        include: [
-          expect.objectContaining({
-            where: { name: 'Electronics' },
-            attributes: ['id', 'name'],
-          })
-        ],
+        include: [expect.objectContaining({where: { name: 'Electronics' },attributes: ['id', 'name']})]
       });
       expect(result).toEqual(mockProducts);
     });
@@ -560,6 +551,129 @@ describe('AppController', () => {
       expect(handleErrorSpy).toHaveBeenCalledWith(error,'Get products by category error');
     });
   });
+
+  describe('getPermissionById', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should return permission from cache (CACHE HIT)', async () => {
+      const cachedPermission = {id: 1,name: 'GET.USER'};
+      mockCacheManager.get.mockResolvedValue(cachedPermission);
+      const result = await service.getPermissionById(1);
+      expect(mockCacheManager.get).toHaveBeenCalledWith('permission_1');
+      expect(result).toEqual(cachedPermission);
+      expect(mockPermissionModel.findByPk).not.toHaveBeenCalled();
+    });
+
+    it('should fetch permission from DB and cache it (CACHE MISS)', async () => {
+      const permissionData = {id: 1,name: 'GET.USER'};
+      const mockPermission = {get: jest.fn().mockReturnValue(permissionData)};
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPermissionModel.findByPk.mockResolvedValue(mockPermission);
+      const result = await service.getPermissionById(1);
+      expect(mockPermissionModel.findByPk).toHaveBeenCalledWith(1, {include: [Role]});
+      expect(mockCacheManager.set).toHaveBeenCalledWith('permission_1',permissionData,60000);
+      expect(result).toEqual(permissionData);
+    });
+
+    it('should throw NotFoundException when permission not found', async () => {
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPermissionModel.findByPk.mockResolvedValue(null);
+      await expect(service.getPermissionById(99)).rejects.toBeInstanceOf(NotFoundException);
+      expect(mockPermissionModel.findByPk).toHaveBeenCalledWith(99, {include: [Role]});
+    });
+
+    it('should handle error when database fails', async () => {
+      const error = new Error('Database error');
+
+      mockCacheManager.get.mockResolvedValue(null);
+      mockPermissionModel.findByPk.mockRejectedValue(error);
+
+      const handleErrorSpy = jest.spyOn(service as any, 'handleError').mockImplementation(() => {});
+
+      await expect(service.getPermissionById(1)).rejects.toThrow('Database error');
+
+      expect(handleErrorSpy).toHaveBeenCalledWith(error,'Get permission by ID error',);
+    });
+  });
+
+  describe('getRoles', () => {
+    afterEach(() => {
+      jest.clearAllMocks();
+    });
+
+    it('should return roles from cache (CACHE HIT)', async () => {
+      const roles = [{ id: 1, name: 'admin' }];
+      mockCacheManager.get.mockResolvedValue(roles);
+      const result = await service.getRoles();
+      expect(mockCacheManager.get).toHaveBeenCalledWith('roles_all');
+      expect(result).toEqual(roles);
+      expect(mockRoleModel.findAll).not.toHaveBeenCalled();
+    });
+    it('should fetch roles from DB and cache them (CACHE MISS)', async () => {
+      const roles = [
+        { id: 1, name: 'admin' },
+        { id: 2, name: 'user' }
+      ];
+
+      mockCacheManager.get.mockResolvedValue(null);
+      mockRoleModel.findAll.mockResolvedValue(roles);
+
+      const result = await service.getRoles();
+
+      expect(mockRoleModel.findAll).toHaveBeenCalledWith({
+        attributes: ['id', 'name', 'createdAt', 'updatedAt'],
+        order: [['createdAt', 'DESC']]
+      });
+
+      expect(mockCacheManager.set).toHaveBeenCalledWith(
+        'roles_all',
+        roles,
+        60000
+      );
+
+      expect(result).toEqual(roles);
+
+    });
+
+    it('should throw NotFoundException when no roles found', async () => {
+
+      mockCacheManager.get.mockResolvedValue(null);
+      mockRoleModel.findAll.mockResolvedValue([]);
+
+      await expect(service.getRoles())
+        .rejects
+        .toBeInstanceOf(NotFoundException);
+
+      expect(mockRoleModel.findAll).toHaveBeenCalled();
+
+    });
+
+    it('should handle error when database fails', async () => {
+
+      const error = new Error('Database error');
+
+      mockCacheManager.get.mockResolvedValue(null);
+      mockRoleModel.findAll.mockRejectedValue(error);
+
+      const handleErrorSpy = jest
+        .spyOn(service as any, 'handleError')
+        .mockImplementation(() => {});
+
+      await expect(service.getRoles())
+        .rejects
+        .toThrow('Database error');
+
+      expect(handleErrorSpy).toHaveBeenCalledWith(
+        error,
+        'Get roles error'
+      );
+
+    });
+
+  });
+
 });
 
 describe('AuthGuard', () => {
@@ -1041,15 +1155,12 @@ describe('PermissionGuard', () => {
   let reflector: Reflector;
 
   const mockReflector = {
-    get: jest.fn(),
+    get: jest.fn()
   };
 
-  const createMockExecutionContext = (user: any): ExecutionContext =>
-    ({
+  const createMockExecutionContext = (user: any): ExecutionContext =>({
       switchToHttp: () => ({
-        getRequest: () => ({
-          user,
-        }),
+        getRequest: () => ({user})
       }),
       getHandler: jest.fn(),
     } as any);
@@ -1065,82 +1176,45 @@ describe('PermissionGuard', () => {
 
   it('should allow access when no permissions required', () => {
     mockReflector.get.mockReturnValue(undefined);
-
-    const context = createMockExecutionContext({
-      role: 'user',
-      permissions: [],
-    });
+    const context = createMockExecutionContext({role: 'user',permissions: []});
 
     const result = guard.canActivate(context);
-
     expect(result).toBe(true);
   });
 
   it('should allow admin access regardless of permissions', () => {
     mockReflector.get.mockReturnValue(['CREATE.USER']);
-
-    const context = createMockExecutionContext({
-      role: 'admin',
-      permissions: [],
-    });
-
+    const context = createMockExecutionContext({role: 'admin',permissions: []});
     const result = guard.canActivate(context);
-
     expect(result).toBe(true);
   });
 
   it('should allow access when user has required permission', () => {
     mockReflector.get.mockReturnValue(['CREATE.USER']);
-
-    const context = createMockExecutionContext({
-      role: 'user',
-      permissions: ['CREATE.USER', 'DELETE.USER'],
-    });
-
+    const context = createMockExecutionContext({role: 'user',permissions: ['CREATE.USER', 'DELETE.USER']});
     const result = guard.canActivate(context);
-
     expect(result).toBe(true);
   });
 
   it('should allow access when user has one of multiple permissions', () => {
-    mockReflector.get.mockReturnValue([
-      'CREATE.USER',
-      'UPDATE.USER',
-    ]);
-
-    const context = createMockExecutionContext({
-      role: 'user',
-      permissions: ['UPDATE.USER'],
-    });
-
+    mockReflector.get.mockReturnValue(['CREATE.USER','UPDATE.USER']);
+    const context = createMockExecutionContext({role: 'user',permissions: ['UPDATE.USER']});
     const result = guard.canActivate(context);
-
     expect(result).toBe(true);
   });
 
   it('should throw ForbiddenException when user lacks permission', () => {
     mockReflector.get.mockReturnValue(['DELETE.USER']);
 
-    const context = createMockExecutionContext({
-      role: 'user',
-      permissions: ['CREATE.USER'],
-    });
+    const context = createMockExecutionContext({role: 'user',permissions: ['CREATE.USER']});
 
-    expect(() => guard.canActivate(context)).toThrow(
-      ForbiddenException,
-    );
+    expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 
   it('should throw ForbiddenException when user has no permissions', () => {
     mockReflector.get.mockReturnValue(['DELETE.USER']);
-
-    const context = createMockExecutionContext({
-      role: 'user',
-      permissions: [],
-    });
-
-    expect(() => guard.canActivate(context)).toThrow(
-      'Permission denied',
-    );
+    const context = createMockExecutionContext({role: 'user',permissions: []});
+    expect(() => guard.canActivate(context)).toThrow('Permission denied');
   });
 });
+

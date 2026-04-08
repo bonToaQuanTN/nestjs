@@ -26,6 +26,8 @@ import {StripeService} from './service/stripe.service';
 import {Category} from './model/app.modelCategory';
 import {categoryController} from './controller/app.controllerCategory';
 import {DiscountController} from './controller/app.controllerDiscount';
+import {SeedRoleService} from './seed/seed.Role';
+import {SeedService} from './seed/seed.admin';
 
 @Module({
   imports: [
@@ -92,6 +94,6 @@ import {DiscountController} from './controller/app.controllerDiscount';
     categoryController,
     DiscountController
   ],
-  providers: [AppService,UploadService,StripeService]
+  providers: [AppService,UploadService,StripeService,SeedRoleService,SeedService]
 })
 export class AppModule {}

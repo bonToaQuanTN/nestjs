@@ -215,7 +215,7 @@ export class AppService {
       this.handleError(error, 'Search user error');
       throw error;
     }
-}
+  }
 
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
@@ -248,7 +248,7 @@ export class AppService {
       this.handleError(error, 'Login error');
       throw error;
     }
-}
+  }
 
   async getRoles() {
     const key = 'roles_all';
@@ -827,7 +827,6 @@ export class AppService {
 
   async getOrders(page: number = 1) {
     this.logger.log(`Get orders page: ${page}`);
-
     try {
       const limit = 5;
       const offset = (page - 1) * limit;
@@ -837,7 +836,7 @@ export class AppService {
           { model: OrderItem },
           {
             model: Discount,
-            as: 'discount',   // QUAN TRỌNG
+            as: 'discount',
             attributes: ['id', 'discountRate'],
             required: false
           }
@@ -1087,7 +1086,7 @@ export class AppService {
       throw error;
     }
 
-}
+  }
 
   async createDiscount(data: CreateDiscountDto) {
     const { id , discountRate } = data;
@@ -1120,5 +1119,6 @@ export class AppService {
       message: 'Discount deleted successfully'
     };
   }
+
 
 }

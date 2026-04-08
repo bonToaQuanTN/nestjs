@@ -22,10 +22,16 @@ export class PermissionGuard implements CanActivate{
     }
 
     const userPermissions = user.permissions || [];
+    const hasPermission = requiredPermissions.some((required) => {
 
-    const hasPermission = requiredPermissions.some(p =>
-      userPermissions.includes(p),
-    );
+      // ví dụ required = GET.USER
+      const [action, resource] = required.split('.');
+
+      return (
+        userPermissions.includes(required) ||        // exact permission
+        userPermissions.includes(`${resource}.*`)    // wildcard permission
+      );
+    });
 
     if (!hasPermission) {
       throw new ForbiddenException('Permission denied');

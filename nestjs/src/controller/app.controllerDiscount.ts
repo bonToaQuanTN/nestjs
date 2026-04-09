@@ -19,6 +19,7 @@ export class DiscountController {
     }
 
     @Post()
+    @Permissions('POST.DISCOUNT')
     createDiscount(@Body() data: CreateDiscountDto) {
         return this.discountService.createDiscount(data);
     }

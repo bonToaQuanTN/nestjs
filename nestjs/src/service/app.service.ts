@@ -830,7 +830,6 @@ export class AppService {
     try {
       const limit = 5;
       const offset = (page - 1) * limit;
-
       const { rows, count } = await this.orderModel.findAndCountAll({
         include: [
           { model: OrderItem },

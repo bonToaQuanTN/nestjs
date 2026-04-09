@@ -2,6 +2,7 @@ import {Table, Column, Model, DataType, PrimaryKey,Default,HasMany,BelongsTo,For
 import { v4 as uuidv4 } from 'uuid';
 import { OrderItem } from "./app.modelItem";
 import {Discount} from "./app.modelDiscount"
+import {Users}from "./app.model"
 
 @Table({
     tableName: 'Orders',
@@ -14,7 +15,10 @@ export class Order extends Model {
     @Default(uuidv4)
     @Column ({type: DataType.UUID}) declare id: string;
 
+
+    @ForeignKey(() => Users)
     @Column({type: DataType.STRING}) declare userId: string;
+    @BelongsTo(() => Users)  declare user: Users;
 
     @HasMany(() => OrderItem) declare items: OrderItem[];
 

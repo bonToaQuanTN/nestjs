@@ -30,8 +30,8 @@ export class StripeService {
             },
             ],
             mode: 'payment',
-            success_url: 'http://localhost:4500/api#/Payment/PaymentController_success',
-            cancel_url: 'http://localhost:4500/api#/Payment/PaymentController_cancel',
+            success_url: 'http://localhost:3000/api#/Payment/PaymentController_success',
+            cancel_url: 'http://localhost:3000/api#/Payment/PaymentController_cancel',
             metadata: {
                 orderId: orderId
             },

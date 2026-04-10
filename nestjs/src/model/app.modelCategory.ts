@@ -1,5 +1,5 @@
 import {Table, Column, Model, DataType, PrimaryKey, AutoIncrement, HasMany} from 'sequelize-typescript';
-import { Product } from "./temp";
+import { Product } from "./app.modelProduct";
 
 @Table({
     tableName: 'Categories',

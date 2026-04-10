@@ -9,7 +9,7 @@ import {Permission} from '../model/app.permissions';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import type { Cache } from 'cache-manager';
 import { Op } from 'sequelize';
-import {Product} from '../model/temp';
+import {Product} from '../model/app.modelProduct';
 import {OrderItem} from '../model/app.modelItem';
 import {Order} from '../model/app.modelOrder';
 import { Sequelize } from 'sequelize';

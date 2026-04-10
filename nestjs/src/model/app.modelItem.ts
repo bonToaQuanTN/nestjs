@@ -1,7 +1,7 @@
 import {Table, Column, Model, DataType, PrimaryKey, ForeignKey, BelongsTo,Default } from "sequelize-typescript";
 import { v4 as uuidv4 } from 'uuid';
 import { Order } from "./app.modelOrder";
-import { Product } from "./temp";
+import { Product } from "./app.modelProduct";
 
 @Table({ 
     tableName: 'OrderItems',

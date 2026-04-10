@@ -17,7 +17,7 @@ import {ConfigModule, ConfigService } from '@nestjs/config';
 import {StringValue } from 'ms';
 import {CacheModule } from '@nestjs/cache-manager';
 import {redisStore } from 'cache-manager-redis-store';
-import {Product} from './model/app.modelProduct';
+import {Product} from './model/temp';
 import {ProductController} from './controller/app.controllerProduct';
 import {OrderItem} from './model/app.modelItem';
 import {Discount} from './model/app.modelDiscount';

@@ -101,5 +101,8 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
-  }
+  },
+  "compilerOptions": {
+  "forceConsistentCasingInFileNames": true
+}
 }

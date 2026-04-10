@@ -38,7 +38,6 @@ export class StripeService {
         });
 
         this.logger.log(`Checkout session created successfully. SessionId: ${session.id}`);
-
         return session;
         } catch (error) {
             this.logger.error(`Create checkout session failed for orderId: ${orderId}`);

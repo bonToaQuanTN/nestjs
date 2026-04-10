@@ -55,7 +55,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({transform: true,}));
   app.use('/payment/webhook', bodyParser.raw({ type: 'application/json' }));
 
-  await app.listen(3000);
+  await app.listen(process.env.PORT || 3000);
   
 }
 bootstrap();

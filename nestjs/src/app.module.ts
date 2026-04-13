@@ -35,7 +35,6 @@ import {SeedService} from './seed/seed.admin';
       isGlobal: true,
       envFilePath: ['.env']
     }),
-
     SequelizeModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -66,9 +65,9 @@ import {SeedService} from './seed/seed.admin';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.getOrThrow<string>('JWT_SECRET'),
+        secret: configService.getOrThrow<string>('JWT_ACCESS_SECRET'),
         signOptions: {
-          expiresIn: configService.getOrThrow<string>('JWT_EXPIRES')as StringValue
+          expiresIn: configService.getOrThrow<string>('JWT_ACCESS_EXPIRES') as StringValue
         }
       })
     }),

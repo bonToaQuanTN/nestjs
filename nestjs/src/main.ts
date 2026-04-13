@@ -33,17 +33,11 @@ async function bootstrap() {
       }),
 
       // ghi tất cả log
-      new winston.transports.File({
-        filename: 'logs/combined.log',
-        level: 'info',
-      }),
+      new winston.transports.File({filename: 'logs/combined.log',level: 'info'}),
 
       // ghi riêng lỗi
-      new winston.transports.File({
-        filename: 'logs/error.log',
-        level: 'error',
-      }),
-    ],
+      new winston.transports.File({filename: 'logs/error.log',level: 'error'}),
+    ]
   }); 
   
   const app = await NestFactory.create(AppModule,{ logger });
@@ -55,7 +49,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({transform: true,}));
   app.use('/payment/webhook', bodyParser.raw({ type: 'application/json' }));
 
-  await app.listen(process.env.PORT || 3000);
-  
+  await app.listen( 3000);
+  //process.env.PORT ||
 }
 bootstrap();

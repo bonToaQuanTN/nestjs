@@ -222,13 +222,12 @@ export class AppService {
     this.logger.log(`Login attempt: ${email}`);
 
     try{
-      const user = await this.userModel.findOne({where: { email },include: [{model: Role,include: [Permission]}]});
+      const user = await this.userModel.findOne({where: { email },include: [{ model: Role, include: [Permission] }]});
       if (!user) {
         this.logger.warn(`Login failed - user not found: ${email}`);
-        throw new NotFoundException('Not found');
+        throw new NotFoundException('User not found');
       }
       const match = await bcrypt.compare(password, user.password);
-
       if (!match) {
         this.logger.warn(`Login failed - wrong password: ${email}`);
         throw new UnauthorizedException('Wrong password');
@@ -236,14 +235,29 @@ export class AppService {
 
       const role = user.role;
       const permissions = role?.permissions?.map(p => p.name) || [];
+      const payload = {id: user.id,email: user.email,role: role?.name,permissions};
 
-      const payload = {id: user.id,email: user.email,role: role?.name,permissions: permissions};
+      // tạo access token
+      const accessToken = await this.jwtService.signAsync(payload,{
+        secret: process.env.JWT_ACCESS_SECRET,
+        expiresIn: process.env.JWT_ACCESS_EXPIRES as any
+      });
+
+      // tạo refresh token
+      const refreshToken = await this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_ACCESS_SECRET,
+        expiresIn: process.env.JWT_ACCESS_EXPIRES as any
+      });
+      // hash refresh token
+      const hash = await bcrypt.hash(refreshToken, 10);
+      await this.userModel.update({ refreshToken: hash },{ where: { id: user.id } });
       this.logger.log(`Login success: ${email}`);
-
       return {
         message: 'Login success',
-        access_token: this.jwtService.sign(payload),
+        access_token: accessToken,
+        refresh_token: refreshToken
       };
+
     }catch(error){
       this.handleError(error, 'Login error');
       throw error;

@@ -20,6 +20,8 @@ export class Users extends Model{
 
     @ForeignKey(() => Role)
     @Column({ type: DataType.INTEGER }) declare roleId: string;
-    @BelongsTo(() => Role)
-    declare role: Role;
+    
+    @BelongsTo(() => Role) declare role: Role;
+
+    @Column({type: DataType.STRING,allowNull: true}) declare refreshToken: string;
 }
